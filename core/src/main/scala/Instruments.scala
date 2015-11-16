@@ -54,9 +54,7 @@ class Instruments(val monitoring: Monitoring = Monitoring.default,
         val (ks, f) = nowPrevSliding(
           B.accum[O,O](init)(O.plus), identity[O],
           label, units, description, kinded).map(_.run)
-        def append(n: O): Unit = {
-          runLogging(f(n))
-        }
+        def add(n: O) = f(n)
         def keys = ks
       }
       c.buffer(bufferTime) // only publish updates this often
@@ -146,7 +144,7 @@ class Instruments(val monitoring: Monitoring = Monitoring.default,
     val (k, snk) = monitoring.topic[Unit,Double](label, Units.Seconds, desc, kinded)(
       B.currentElapsed(window).map(_.toSeconds.toDouble)).map(_.run)
     val g = new Gauge[Continuous[Double], Unit] {
-      def set(u: Unit) = runLogging(snk(u))
+      def setValue(u: Unit) = snk(u)
       def keys = Continuous(k)
     }
     g.set(())
@@ -164,7 +162,7 @@ class Instruments(val monitoring: Monitoring = Monitoring.default,
     val (k, snk) = monitoring.topic[Unit,Double](label, Units.Seconds, desc, kinded)(
       B.currentRemaining(window).map(_.toSeconds.toDouble)).map(_.run)
     val g = new Gauge[Continuous[Double], Unit] {
-      def set(u: Unit) = runLogging(snk(u))
+      def setValue(u: Unit) = snk(u)
       def keys = Continuous(k)
     }
     g.set(())
@@ -183,7 +181,7 @@ class Instruments(val monitoring: Monitoring = Monitoring.default,
                                                  kinded)(
       B.elapsed.map(_.toSeconds.toDouble / 60)).map(_.run)
     val g = new Gauge[Continuous[Double], Unit] {
-      def set(u: Unit) = runLogging(snk(u))
+      def setValue(u: Unit) = snk(u)
       def keys = Continuous(k)
     }
     g.set(())
@@ -204,7 +202,7 @@ class Instruments(val monitoring: Monitoring = Monitoring.default,
     val g = new Gauge[Continuous[A],A] {
       val (key, snk) = monitoring.topic(s"now/${label.trim}", units, description, kinded)(
         B.ignoreTick(B.resetEvery(window)(B.variable(init)))).map(_.run)
-      def set(a: A) = runLogging(snk(_ => a))
+      def setValue(a: A) = snk(_ => a)
       def keys = Continuous(key)
 
       set(init)
@@ -280,7 +278,7 @@ class Instruments(val monitoring: Monitoring = Monitoring.default,
       val (ks, f) =
         nowPrevSliding(B.stats, Stats(_:Double), label, units, description, kinded).map(_.run)
       def keys = ks
-      def set(d: Double): Unit = runLogging(f(d))
+      def setValue(d: Double) = f(d)
       set(init)
     }
     g.buffer(bufferTime)

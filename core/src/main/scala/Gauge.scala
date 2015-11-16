@@ -6,12 +6,20 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration._
 import scalaz.concurrent.Strategy
 import scalaz.Contravariant
-import scalaz.concurrent.Actor
+import scalaz.concurrent.{Actor, Task}
 import scalaz.concurrent.Actor._
+import scalaz.stream.{Sink, sink => Snk}
 
 trait Gauge[K,A] extends Instrument[K] { self =>
 
-  def set(a: A): Unit
+  /** UNSAFE. Set the value of the gauge to the given value. */
+  def set(a: A): Unit = setValue(a).run
+
+  /** Set the value of the gauge to the given value */
+  def setValue(a: A): Task[Unit]
+
+  /** A sink that writes values to this gauge */
+  def sink: Sink[Task, A] = Snk.lift(setValue)
 
   /**
    * Delay publishing updates to this gauge for the
@@ -23,12 +31,12 @@ trait Gauge[K,A] extends Instrument[K] { self =>
              implicit S: ScheduledExecutorService = Monitoring.schedulingPool,
              S2: ExecutorService = Monitoring.defaultPool): Gauge[K, A] = new Gauge[K, A] {
     val b = new Gauge.Buffer[Option[A]](d, None)((_, a) => a, a => a, a => self.set(a.get))
-    def set(a: A): Unit = b(Some(a))
+    def setValue(a: A) = b(Some(a))
     def keys = self.keys
   }
 
   def map[B](f: B => A): Gauge[K, B] = new Gauge[K, B] {
-    def set(b: B): Unit = self.set(f(b))
+    def setValue(b: B) = self.setValue(f(b))
     def keys = self.keys
   }
 }
@@ -66,7 +74,7 @@ object Gauge {
         }
       }
 
-      def apply(a: A) = send(Some(a))
+      def apply(a: A): Task[Unit] = Task.delay(send(Some(a)))
     }
 
   def scale[K](k: Double)(g: Gauge[K,Double]): Gauge[K,Double] =
