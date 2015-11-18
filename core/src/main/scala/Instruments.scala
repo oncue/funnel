@@ -298,10 +298,10 @@ class Instruments(val monitoring: Monitoring = Monitoring.default,
       val (ks, f) =
         nowPrevSliding(B.stats, Stats(_:Double), label, u, description, kinded).map(_.run)
       def keys = ks
-      def recordNanos(nanos: Long): Unit = {
+      def postNanos(nanos: Long): Task[Unit] = {
         // record time in milliseconds
         val millis = nanos.toDouble / 1e6
-        runLogging(f(millis))
+        f(millis)
       }
     }
     t.buffer(bufferTime)
