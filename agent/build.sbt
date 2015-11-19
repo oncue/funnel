@@ -1,21 +1,11 @@
-import oncue.build._
-import spray.revolver.RevolverPlugin._
 
-OnCue.baseSettings
+common.settings
 
-ScalaCheck.settings
+common.revolver
 
-ScalaTest.settings
+common.unmanaged
 
-Revolver.settings
-
-SbtMultiJvm.multiJvmSettings
-
-Custom.testing
-
-Custom.compilation
-
-Custom.revolver
+common.fatjar
 
 libraryDependencies ++= Seq(
   "net.databinder"    %% "unfiltered-filter"       % V.unfiltered,
@@ -23,19 +13,8 @@ libraryDependencies ++= Seq(
   "oncue.knobs"       %% "core"                    % V.knobs,
   "io.netty"           % "netty-handler"           % V.netty,
   "io.netty"           % "netty-codec"             % V.netty,
-  "com.github.cjmx"   %% "cjmx"                    % "2.2.+" exclude("org.scala-sbt","completion") exclude("com.google.code.gson","gson"),
-  "org.apache.curator" % "curator-test"            % "2.9.0"       % "test"
+  "com.github.cjmx"   %% "cjmx"                    % V.cjmx exclude("org.scala-sbt","completion") exclude("com.google.code.gson","gson"),
+  "org.apache.curator" % "curator-test"            % "2.9.0" % "test"
 )
 
-mainClass in Revolver.reStart := Some("funnel.agent.Main")
-
-assemblyMergeStrategy in assembly := {
-  case "META-INF/io.netty.versions.properties" => MergeStrategy.first
-  case x =>
-    val oldStrategy = (assemblyMergeStrategy in assembly).value
-    oldStrategy(x)
-}
-
-unmanagedClasspath in Compile ++= Custom.toolsJar
-
-unmanagedClasspath in Test ++= Custom.toolsJar
+mainClass in run := Some("funnel.agent.Main")

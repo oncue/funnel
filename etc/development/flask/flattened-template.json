@@ -1,0 +1,309 @@
+{
+  "order": 10,
+  "template": "funnel-flattened*",
+  "mappings": {
+    "_default_": {
+      "_all": {
+        "enabled": true
+      },
+      "dynamic_templates": [
+        {
+          "date_fields": {
+            "mapping": {
+              "doc_values": true,
+              "format": "dateOptionalTime",
+              "type": "date"
+            },
+            "match": "*",
+            "match_mapping_type": "date"
+          }
+        },
+        {
+          "byte_fields": {
+            "mapping": {
+              "doc_values": true,
+              "type": "byte"
+            },
+            "match": "*",
+            "match_mapping_type": "byte"
+          }
+        },
+        {
+          "double_fields": {
+            "mapping": {
+              "doc_values": true,
+              "type": "double"
+            },
+            "match": "*",
+            "match_mapping_type": "double"
+          }
+        },
+        {
+          "float_fields": {
+            "mapping": {
+              "doc_values": true,
+              "type": "float"
+            },
+            "match": "*",
+            "match_mapping_type": "float"
+          }
+        },
+        {
+          "integer_fields": {
+            "mapping": {
+              "doc_values": true,
+              "type": "integer"
+            },
+            "match": "*",
+            "match_mapping_type": "integer"
+          }
+        },
+        {
+          "long_fields": {
+            "mapping": {
+              "doc_values": true,
+              "type": "long"
+            },
+            "match": "*",
+            "match_mapping_type": "long"
+          }
+        },
+        {
+          "short_fields": {
+            "mapping": {
+              "doc_values": true,
+              "type": "short"
+            },
+            "match": "*",
+            "match_mapping_type": "short"
+          }
+        },
+        {
+          "string_fields": {
+            "mapping": {
+              "doc_values": true,
+              "index": "not_analyzed",
+              "omit_norms": true,
+              "type": "string"
+            },
+            "match": "*",
+            "match_mapping_type": "string"
+          }
+        }
+      ],
+      "properties": {
+        "@version": {
+          "doc_values": true,
+          "index": "not_analyzed",
+          "type": "string"
+        }
+      }
+    },
+    "metric": {
+      "dynamic_templates": [],
+      "properties": {
+        "@timestamp": {
+          "format": "dateOptionalTime",
+          "type": "date",
+          "doc_values": true
+        },
+        "flask": {
+          "index": "not_analyzed",
+          "type": "string",
+          "doc_values": true
+        },
+        "elapsed": {
+          "type": "double",
+          "doc_values": true
+        },
+        "remaining": {
+          "type": "double",
+          "doc_values": true
+        },
+        "uptime": {
+          "type": "double",
+          "doc_values": true
+        },
+        "cluster": {
+          "index": "not_analyzed",
+          "type": "string",
+          "doc_values": true
+        },
+        "counter": {
+          "type": "integer",
+          "doc_values": true
+        },
+        "edge": {
+          "index": "not_analyzed",
+          "type": "string",
+          "doc_values": true
+        },
+        "environment": {
+          "index": "not_analyzed",
+          "type": "string",
+          "doc_values": true
+        },
+        "experiment_group": {
+          "index": "not_analyzed",
+          "type": "string",
+          "doc_values": true
+        },
+        "experiment_id": {
+          "index": "not_analyzed",
+          "type": "string",
+          "doc_values": true
+        },
+        "gauge-double": {
+          "type": "double",
+          "doc_values": true
+        },
+        "gauge-stats": {
+          "properties": {
+            "count": {
+              "type": "integer",
+              "doc_values": true
+            },
+            "kurtosis": {
+              "type": "double",
+              "doc_values": true
+            },
+            "last": {
+              "type": "double",
+              "doc_values": true
+            },
+            "mean": {
+              "type": "double",
+              "doc_values": true
+            },
+            "skewness": {
+              "type": "double",
+              "doc_values": true
+            },
+            "standardDeviation": {
+              "type": "double",
+              "doc_values": true
+            },
+            "variance": {
+              "type": "double",
+              "doc_values": true
+            }
+          }
+        },
+        "gauge-string": {
+          "index": "not_analyzed",
+          "type": "string",
+          "doc_values": true
+        },
+        "host": {
+          "index": "not_analyzed",
+          "type": "string",
+          "doc_values": true
+        },
+        "kind": {
+          "index": "not_analyzed",
+          "type": "string",
+          "doc_values": true
+        },
+        "name": {
+          "index": "not_analyzed",
+          "type": "string",
+          "doc_values": true
+        },
+        "numeric": {
+          "properties": {
+            "count": {
+              "type": "integer",
+              "doc_values": true
+            },
+            "kurtosis": {
+              "type": "double",
+              "doc_values": true
+            },
+            "last": {
+              "type": "double",
+              "doc_values": true
+            },
+            "mean": {
+              "type": "double",
+              "doc_values": true
+            },
+            "skewness": {
+              "type": "double",
+              "doc_values": true
+            },
+            "standardDeviation": {
+              "type": "double",
+              "doc_values": true
+            },
+            "variance": {
+              "type": "double",
+              "doc_values": true
+            }
+          }
+        },
+        "stack": {
+          "index": "not_analyzed",
+          "type": "string",
+          "doc_values": true
+        },
+        "timer": {
+          "properties": {
+            "count": {
+              "type": "integer",
+              "doc_values": true
+            },
+            "kurtosis": {
+              "type": "double",
+              "doc_values": true
+            },
+            "last": {
+              "type": "double",
+              "doc_values": true
+            },
+            "mean": {
+              "type": "double",
+              "doc_values": true
+            },
+            "skewness": {
+              "type": "double",
+              "doc_values": true
+            },
+            "standardDeviation": {
+              "type": "double",
+              "doc_values": true
+            },
+            "variance": {
+              "type": "double",
+              "doc_values": true
+            }
+          }
+        },
+        "traffic": {
+          "index": "not_analyzed",
+          "type": "string",
+          "doc_values": true
+        },
+        "type": {
+          "index": "not_analyzed",
+          "type": "string",
+          "doc_values": true
+        },
+        "units": {
+          "index": "not_analyzed",
+          "type": "string",
+          "doc_values": true
+        },
+        "uri": {
+          "index": "not_analyzed",
+          "type": "string",
+          "doc_values": true
+        },
+        "window": {
+          "index": "not_analyzed",
+          "type": "string",
+          "doc_values": true
+        }
+      }
+    }
+  }
+}

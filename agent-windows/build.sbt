@@ -1,23 +1,17 @@
 
-import oncue.build._
+common.settings
 
-OnCue.baseSettings
+common.revolver
 
-Bundle.settings
-
-Custom.testing
-
-Custom.compilation
-
-name := "agent-windows"
+common.unmanaged
 
 libraryDependencies ++= Seq(
   "net.databinder"  %% "unfiltered-filter"       % V.unfiltered,
   "net.databinder"  %% "unfiltered-netty-server" % V.unfiltered,
   "oncue.knobs"     %% "core"                    % V.knobs,
-  "io.netty"         % "netty-handler"           % "4.0.25.Final",
-  "io.netty"         % "netty-codec"             % "4.0.25.Final",
-  "com.github.cjmx" %% "cjmx"                    % "2.2.+" exclude("org.scala-sbt","completion") exclude("com.google.code.gson","gson")
+  "io.netty"         % "netty-handler"           % V.netty,
+  "io.netty"         % "netty-codec"             % V.netty,
+  "com.github.cjmx" %% "cjmx"                    % V.cjmx exclude("org.scala-sbt","completion") exclude("com.google.code.gson","gson")
 )
 
 /* this is basically a hack so that the windows agent can be compiled against jeromq */
@@ -30,6 +24,4 @@ assemblyMergeStrategy in assembly := {
     oldStrategy(x)
 }
 
-unmanagedClasspath in Compile ++= Custom.toolsJar
-
-unmanagedClasspath in Test ++= Custom.toolsJar
+mainClass in run := Some("funnel.agent.Main")

@@ -1,19 +1,8 @@
-import oncue.build._
-import com.typesafe.sbt.SbtMultiJvm
-import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys.MultiJvm
 
-OnCue.baseSettings
+common.ignore
 
-ScalaTest.settings
+common.compilation
 
-SbtMultiJvm.multiJvmSettings
-
-Custom.testing
-
-Custom.compilation
-
-Custom.resources
-
-Publishing.ignore
+common.testSettings
 
 libraryDependencies += "com.typesafe.akka" %% "akka-multi-node-testkit" % "2.3.11" % "test"

@@ -25,3 +25,4 @@ sbt
 tags
 _site
 *.local.yml
+gpg.sbt

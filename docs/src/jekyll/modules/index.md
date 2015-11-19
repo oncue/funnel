@@ -8,9 +8,45 @@ section: "modules"
 
 *Funnel* comes with a range of modules that allows composistion of the system in a variety of ways. Some modules are straight exporters, others provide both importing and exporting functionality.
 
-<a name="elastic"></a>
+<a name="elastic-flattened"></a>
 
-## Elastic Search
+## Elastic Search (Flattened)
+
+Primarily for visualisation, this consumer takes the stream and aggregates into one document *per-metric* per time window, and then sends those documents to Elastic Search as a single `PUT` operation. The format of the message looks like this:
+
+```
+{
+  "@timestamp": "2015-11-06T03:29:18.779+0000",
+  "window": "now",
+  "name": "jvm.memory.total.used",
+  "host": "ip-10-124-10-140",
+  "uri": "ip-10-124-10-140",
+  "cluster": "flask-5.0.450",
+  "flask": "ip-10-124-10-140",
+  "units": "megabytes",
+  "environment": "imdev",
+  "stack": "flask-5.0.450",
+  "numeric": {
+    "count": 1,
+    "variance": 0,
+    "kurtosis": null,
+    "mean": 4662.508824,
+    "last": 4662.508824,
+    "skewness": null,
+    "standardDeviation": 0
+  },
+  "kind": "numeric",
+  "type": "stats"
+}
+```
+
+Using this document format enables extreamly fast indexing of documents in Elastic Search and gives great performance when using Kibana 4 (or later) for data visulisation.
+
+<a name="elastic-exploded"></a>
+
+## Elastic Search (Exploded)
+
+**This sink is only to be used for light traffic, and at high-load it will cause yuor elastic search cluster to bloat its field space beyond the recomended safe limit. For high-volume workloads use the Flattened ES sink.**
 
 Primarily for visualisation, this consumer takes the stream and aggregates into one document *per-funnel-host* per time window, and then sends those documents to Elastic Search in a bulk `PUT` operation. The format of the message looks like this:
 
@@ -66,19 +102,11 @@ object Main {
 
 ```
 
-<a name="riemann"></a>
-
-## Riemann
-
-Primarily for alerting, *Funnel* datapoints are batched up and sent to Riemann so that alerts can be configured (and saving the need for us to integrate with many 3rd party vendors). Please see the [Riemann documentation](http://riemann.io) for information on how to setup the alerting system.
-
-Riemann is a great choice for small teams using *Funnel*, but in larger organisations the lack of self-service alert definition is usually a deal breaker. In our field testing, we were easily able to overwhelm Reimann, even when it was running on a powerful box - hence, this is not recomended for large distributed systems.
-
 <a name="zeromq"></a>
 
 ## ZeroMQ
 
-The [ZeroMQ](http://zeromq.org/) module provides both the ability to publish metrics from a `Monitoring` instance out to a socket (with an arbitrary transport and mode), and the ability to consume metrics from a socket and import them into the specified `Monitoring` instance. 
+The [ZeroMQ](http://zeromq.org/) module provides both the ability to publish metrics from a `Monitoring` instance out to a socket (with an arbitrary transport and mode), and the ability to consume metrics from a socket and import them into the specified `Monitoring` instance.
 
 #### Installation
 
@@ -86,7 +114,7 @@ The ZeroMQ module comes in two flavours:
 
 1. `zeromq` which uses the *native* `libzmq` C++ library and allows use of UNIX domain sockets, PGM etc. This is the reference implementation of ZMTP.
 
-1. `zeromq-java` which uses the pure-Java implementation of the same library API. This module is meant purely for compatiblity with Windows systems, as it cannot leverage domain sockets or PGM. Do not use this module unless you are sure of what you're doing. 
+1. `zeromq-java` which uses the pure-Java implementation of the same library API. This module is meant purely for compatiblity with Windows systems, as it cannot leverage domain sockets or PGM. Do not use this module unless you are sure of what you're doing.
 
 With this frame, in order to run locally you'll need to install the `libzmq` and the `jzmq` native binaries. You can do that by running the following steps:
 
@@ -96,10 +124,7 @@ With this frame, in order to run locally you'll need to install the `libzmq` and
 brew update && brew install zeromq
 ```
 
-2. Download the JZMQ binaries from Jenkins
-
-The job is here: [https://jenkins.oncue.verizon.net:8443/job/ThirdParty-jzmq/label=MacOSX-10.8.5/](https://jenkins.oncue.verizon.net:8443/job/ThirdParty-jzmq/label=MacOSX-10.8.5/)
-
+2. Build the JZMQ binaries
 3. Unzip the file and execute the following shell
 
 ```
@@ -114,7 +139,7 @@ That's all there is to it!
 In order to publish your metrics using ZeroMQ, ensure that you have the following in your `build.sbt`:
 
 ```
-libraryDependencies += "funnel" %% "zeromq" % "x.x.x"
+libraryDependencies += "oncue.funnel" %% "zeromq" % "x.x.x"
 ```
 
 This will allow you to setup the publishing of metrics. Technically, this publishing happens on a background daemon thread, so its typically best to put this line at the very edge of your work (typically the application main):
@@ -154,7 +179,7 @@ object Foo {
   def main(args: Array[String]): Unit = {
   	 val alive = signalOf(true)
     Publish.toUnixSocket(signal = alive)
-    
+
     // sometime later when you want to stop
     stop(alive)
   }
@@ -177,7 +202,7 @@ object Foo {
 
   def main(args: Array[String]): Unit = {
   	 val alive = signalOf(true)
-    val dp: DatapointParser = Mirror.from(alive) _ 
+    val dp: DatapointParser = Mirror.from(alive) _
   }
 }
 ```
@@ -208,7 +233,7 @@ Essentially the ZeroMQ socket types are modelled as functions and you can specif
 
 #### Wire Protocol
 
-Whilst the 0mq socket uses [ZMTP](http://zmtp.org/), the payload framing is always the responsibility of the implementing application. Subsequently, *Funnel* has an application-layer scheme for handling versioning and message discrimination on the wire. *Funnel* uses a single header frame followed by all subsequent payload frames. The header frame acts like a routing envelope for the message payload, and it has a simple delimited text construction that looks like this: 
+Whilst the 0mq socket uses [ZMTP](http://zmtp.org/), the payload framing is always the responsibility of the implementing application. Subsequently, *Funnel* has an application-layer scheme for handling versioning and message discrimination on the wire. *Funnel* uses a single header frame followed by all subsequent payload frames. The header frame acts like a routing envelope for the message payload, and it has a simple delimited text construction that looks like this:
 
 ```
 <scheme>/<version>/<window>/<topic>
@@ -217,8 +242,8 @@ Whilst the 0mq socket uses [ZMTP](http://zmtp.org/), the payload framing is alwa
 Some of the fields here are *optional*, and but all fields have an important role to play:
 
 * `scheme`: mandatory element that represents the types of payload that this message (set of frames) contains. At the time of writing the *Funnel* module supported two types of message scheme: `fsm` and `telem`, everything is classified as `unknown`.
- 
-* `version`: mandatory element that represents the version of the prefixed `scheme`. This is vital for protocol evolution over time, and clients are expected to parse the version information and be able to support multiple scheme versions simultaneously. Often the combination of `scheme` and `version` is everything the client needs to figure out how to handle a particular payload. 
+
+* `version`: mandatory element that represents the version of the prefixed `scheme`. This is vital for protocol evolution over time, and clients are expected to parse the version information and be able to support multiple scheme versions simultaneously. Often the combination of `scheme` and `version` is everything the client needs to figure out how to handle a particular payload.
 
 * `window`: *optional* element that denotes the *Funnel* window period this message pertains too. At the time of writing this was really only applicable to the `fsm` scheme, and only makes sense when *Flask* is consuming metrics from a remote target.
 

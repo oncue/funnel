@@ -1,15 +1,7 @@
 
-import oncue.build._
+common.settings
 
-OnCue.baseSettings
-
-ScalaCheck.settings
-
-ScalaTest.settings
-
-Custom.resources
-
-Custom.binaryCompatibility
+// Custom.binaryCompatibility
 
 fork in (run in Test) := true
 

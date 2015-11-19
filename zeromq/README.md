@@ -10,10 +10,7 @@ This module uses the native ZeroMQ library, but is API compatible with the pure-
 brew update && brew install zeromq
 ```
 
-2. Download the JZMQ binaries from Jenkins
-
-The job is here: [https://jenkins.oncue.verizon.net:8443/job/ThirdParty-jzmq/label=MacOSX-10.8.5/](https://jenkins.oncue.verizon.net:8443/job/ThirdParty-jzmq/label=MacOSX-10.8.5/)
-
+2. Download or build the JZMQ binaries
 3. Unzip the file and execute the following shell
 
 ```

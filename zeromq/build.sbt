@@ -1,21 +1,7 @@
 
-import oncue.build._
-import com.typesafe.sbt.SbtMultiJvm
-import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys.MultiJvm
+common.settings
 
-OnCue.baseSettings
-
-ScalaCheck.settings
-
-ScalaTest.settings
-
-SbtMultiJvm.multiJvmSettings
-
-Custom.testing
-
-Custom.resources
-
-Custom.binaryCompatibility
+// Custom.binaryCompatibility
 
 // pure-java implementation:
 // libraryDependencies += "org.zeromq" % "jeromq" % "0.3.4"
@@ -23,6 +9,7 @@ Custom.binaryCompatibility
 libraryDependencies ++= Seq(
   "org.zeromq"      % "jzmq"                  % "3.1.0",
   "org.scodec"      %% "scodec-core"          % "1.7.1",
-  "oncue.ermine"    %% "scala-parsers"        % V.ermine,
-  "oncue.typelevel" %% "shapeless-scalacheck" % "0.4.0" % "test"
+  "oncue.ermine"    %% "ermine-parser"        % V.ermine
 )
+
+addCompilerPlugin("org.scalamacros" % "paradise" % "2.0.1" cross CrossVersion.full)

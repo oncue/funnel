@@ -1,14 +1,15 @@
 
-import oncue.build._
 import com.typesafe.sbt.SbtMultiJvm.MultiJvmKeys.MultiJvm
 
-OnCue.baseSettings
+common.ignore
 
-Publishing.ignore
+prompt.settings
 
-organization in Global  := "oncue.svc.funnel"
+organization in Global  := "oncue.funnel"
 
 scalaVersion in Global  := "2.10.5"
+
+parallelExecution in Global := false
 
 lazy val funnel = project.in(file(".")).aggregate(
   core,
@@ -36,7 +37,7 @@ lazy val `chemist-aws` = project.dependsOn(chemist % "test->test;compile->compil
 
 lazy val `chemist-static` = project.dependsOn(chemist % "test->test;compile->compile")
 
-lazy val core = project
+lazy val core = project.enablePlugins(BuildInfoPlugin)
 
 lazy val docs = project.dependsOn(core)
 

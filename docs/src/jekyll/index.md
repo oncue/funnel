@@ -45,15 +45,15 @@ Several design choices were made specifically with the goal of giving *Funnel* t
 
 ## Time Periods
 
-As with all monitoring systems, understanding the way time periods are handled is really important. A *period* is a time in which metrics are collected, and resets occur at period boundaries. *Funnel* supports three different *time window* types, as illustrated by the diagram below:
+As with all monitoring systems, understanding the way time periods are handled is really important. A *period* represents a time in which metrics are collected, and resets occur at the period boundaries. *Funnel* supports three different *time window* types, as illustrated by the diagram below:
 
 ![image]({{ site.baseurl }}img/time-periods.png)
 
-This diagram represents time advancing from left to right. A, B and C illustrate period boundaries. The duration of periods is arbitrary, but the default setting in *Funnel* is 1 minute. In this frame:
+This diagram represents time advancing from left to right. A, B and C illustrate period boundaries. The duration of time periods is arbitrary, but the default setting in *Funnel* is 1 minute. In this frame:
 
-* **N** - The "now" time window represents the current set of metrics that are in flight, and explicitly does not represent a completed period. If 30 seconds have elapsed in the current 1-minute period, then "now" only comprises the metrics collected in the past 30 seconds. Any new metric updates go into this window, and the window resets at each period boundary.
+* **N** - The "now" window represents the current set of metrics that are in flight, and explicitly does not represent a completed period. If 30 seconds have elapsed in the current 1-minute period, then "now" only comprises the metrics collected in the past 30 seconds. All new metric updates go into this window, and the window resets at each period boundary.
 * **P** - The "previous" window represents the full minute prior to the last period boundary. Think of this as a stream that only produces a value once every period.
-* **S** - The "sliding" window represents a full period duration, irrespective of whether that duration crosses a period boundary. If a period is 1 minute, then the "sliding" window contains all metrics collected in the past minute. Any new updates go into this window, and are removed from the window when they are more than 1 period old.
+* **S** - The "sliding" window represents a full period duration, irrespective of whether that duration crosses a period boundary. If a period is 1 minute, then the "sliding" window contains all metrics collected in the past minute. All new metric updates go into this window, and are removed from the window when they are more than 1 period old.
 
 <a name="units"></a>
 

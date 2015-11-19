@@ -1,16 +1,9 @@
 
-import oncue.build._
-import spray.revolver.RevolverPlugin._
+common.settings
 
-OnCue.baseSettings
+common.revolver
 
-Revolver.settings
-
-ScalaTest.settings
-
-Custom.compilation
-
-Custom.resources
+common.fatjar
 
 libraryDependencies ++= Seq(
   "com.amazonaws" % "aws-java-sdk-ec2"            % V.aws,
@@ -22,4 +15,4 @@ libraryDependencies ++= Seq(
 
 fork in Test := false
 
-mainClass in Revolver.reStart := Some("funnel.chemist.aws.Main")
+mainClass in run := Some("funnel.chemist.aws.Main")

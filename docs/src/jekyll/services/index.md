@@ -257,36 +257,58 @@ A URL can be any Funnel URL that serves a stream of metrics. It's a good idea to
 
 ### Configuration
 
-Flask takes all of its configuration information via [Knobs](https://github.oncue.verizon.net/pages/IntelMedia/knobs); primarily by file. The default configuration file looks like this:
+Flask takes all of its configuration information via [Knobs](https://github.com/oncue/knobs); primarily by file. The default configuration file looks like this:
 
 ```
 flask {
   name = "flask"
-  sns-error-topic = "flask-notifications"
+
+  metric-ttl = 24 hours
 
   collect-local-metrics = true
+
   local-metric-frequency = 30
+
+  environment = "dev"
 
   network {
     host = "localhost"
-    port = 6777
+    http-port = 6777
+    selfie-port = 7557
   }
 
-# elastic-search {
-#   url = "http://localhost:9200"
-#   index-name = "eee"
-#   type-name = "fff"
-#
-#   # Optional Parameters:
-#   partition-date-format = "yyyy.ww"
-#   connection-timeout-in-ms = 5000
-# }
-}
+  retry-schedule {
+    duration = 30s
+    retries = 6
+  }
 
-aws {
-  region = "$(AWS_DEFAULT_REGION)"
-  access-key = "$(AWS_ACCESS_KEY)"
-  secret-key = "$(AWS_SECRET_KEY)"
+  # elastic-search-exploded {
+  #   url = "http://localhost:9200"
+  #   index-name = "funnel"
+  #   type-name = "metric"
+  #   groups = [ "previous/jvm", "previous/system", "previous" ]
+  #   template {
+  #     name = "flask"
+  #     location = "/path/to/exploded-template.json"
+  #   }
+  #   partition-date-format = "yyyy.ww"
+  #   connection-timeout = 5 seconds
+  #   minimum-publish-frequency = 10 minutes
+  # }
+
+  # elastic-search-flattened {
+  #   url = "http://localhost:9200"
+  #   index-name = "monitoring"
+  #   type-name = "metric"
+  #   groups = [ "previous" ]
+  #   template {
+  #     name = "flaskv2"
+  #     location = "/path/to/flattened-template.json"
+  #   }
+  #   partition-date-format = "yyyy.MM.dd"
+  #   connection-timeout = 5 seconds
+  #   minimum-publish-frequency = 10 minutes
+  # }
 }
 
 ```
@@ -295,28 +317,19 @@ Let's consider these options one by one:
 
 * `flask.name`: the name the running JVM process will report.
 
-* `flask.sns-error-topic`: topic that flask will publish errors to (see the section [Dynamic Error Reporting](#flask-error-reporting) for more information)
-
 * `flask.collect-local-metrics` and `flask.local-metric-frequency`: should flask use its own funnel (see the section [System Metrics](#flask-system-metrics))
 
-* `flask.network.host` and `flask.network.port`: the network host and port that flask process will bind to when it starts.
+* `flask.network.host`, `flask.network.selfie-port` and `flask.network.http-port`: the network host and port that flask process will bind to when it starts.
 
-* `flask.riemann.*`: configuration parameters that specify how flask will connect with the Riemann alerting system. See [Stream Consumers](#flask-stream-consumers) for more information)
-
+* `flask.elastic.*`: configuration parameters that specify how flask will connect and publish data to the elastic search sinks. See the [elastic sink docs]({{ site.baseurl }}/modules/#elastic-flattened) for more information.
 
 <a name="flask-error-reporting"></a>
 
-### Dynamic Error Reporting
+### Handling Connection Failures
 
-Sometimes, things go wrong and *Flask* will be unable to reach a *Funnel* host that it was previously talking to. When this happens, *Flask* will exponentially back-off and try to reconnect over a period of time, but if all attempts fail *Flask* will raise an alert and push a notification onto Amazon SNS (which in turn pushes to all subscribers).
+Sometimes, things go wrong and *Flask* will be unable to reach a *Funnel* host that it was previously talking to. When this happens, *Flask* will exponentially back-off and try to reconnect over a period of time, but if all attempts fail *Flask* will simply write a log to detailing the failure. This is ok due to the design of chemist and the manner in which work is discovered and re-allocated.
 
-The SNS topic specified with the configuration parameter `flask.sns-error-topic` does not have to exist at the time *Flask* boots up; if its missing then it will automatically be created (assuming the AWS privileges are sufficient to allow for that).
-
-<a name="flask-stream-consumers"></a>
-
-### Stream Consumers
-
-*Flask* is designed to pull metrics from *Funnel* hosts and then emit those windows to a set of output locations. These output locations are for the most part arbitrary - all that's needed is to write a `Sink` that then serialises the stream from *Flask* to something that can be understood by the system you wish to send the datapoints to.
+The length and count of the retry strategy is configured using the `flask.retry-schedule` block of configuration, for which the parameters are quite self-explanatory. The default is for a 30s interval between disconnect and rely, and to retry 6 times (3 minutes overall).
 
 <a name="flask-system-metrics"></a>
 
@@ -347,7 +360,7 @@ SIGAR gathers a large set of metrics for the local machine:
 
 The final component living under the *Funnel* umbrella is *Chemist*. Given that each and every *Flask* does not know about any of its peers - it only understands the work it has been assigned - there has to be a way to automatically identify and assign new work as machines in a operational region startup, fail and gracefully shutdown. This is especially true when a given *Flask* instance fails unexpectedly, as its work will need to be re-assigned to other available *Flask* instances so that operational visibility is not compromised.
 
-*Chemist* can be run on a variety of platforms. Currently there are two fully supported paths:
+*Chemist* can be run on a variety of platforms. Currently there are two fully supported paths and one future path:
 
 * `chemist-aws`: for dynamically growing and shrinking monitoring workloads utilising Amazon Web Services.
 * `chemist-static`: for staticly provisioned on-premis hardware that seldom changes.
@@ -361,29 +374,33 @@ Chemist has a rudimentary but useful API for conducting several management tasks
 
 * `GET /shards/:id`: display a information pertaining to a specific *Flask* shard ID, their network and version information.
 
-* `POST /shards/:id/exclude`: migrate all the monitoring targets currently assigned to this flask shard to the other shards in the cluster. This is an extremely useful utility for conducting rolling upgrades to the flask cluster.
-
-* `POST /shards/:id/include`: the opposite of the `exclude` resource, this re-registers the shard and allows chemist to assign it work.
-
-* `GET /errors`: a bounded stack of all the errors the current set of *Flask* instances have seen. This is intended to be informative for administrators only; its just an FYI about the things the system stopped monitoring (for whatever reason).
+* `GET /shards/:id/sources`: reach out to the flask with the given identifier and ask for its current workload. This is essentially a proxy to the Flask and is for debugging convenience.
 
 * `GET /distribution`: the current split of available work over all the current shards. Essentially detailing which clusters are assigned to which shards.
 
-* `GET /lifecycle/history`: the history of events as seen by chemist. This typically represents events like `StateChange` of a particular node, or `NewFlask` in the event new sharding capacity came online.
+* `GET /unmonitorable`: given everything that can be found using the `Discovery` implementation of that particular `Platform`, check to see what is not reachable or monitor able (i.e. no *Funnel* running at the specified location, or not location specified).
 
-* `GET /lifecycle/states`: a bounded stack of the most recent state changes nodes in the system went through (see the below figure detailing the state workflow diagram of chemist internals).
+* `GET /platform/history`: detail all the events that have arrived from the "platform" (e.g. AWS) instructing Chemist about new targets that can be monitored. 
 
-* `GET /platform/history`
+#### Internals
 
-* `POST /bootstrap`: force chemist to conduct a full phase of discovery and request all current shard load from all flasks and assign any delta that is not found to be currently monitored. 
+Chemist is implemented as a functional stream transducer, and it has a range of moving parts in order to make its life partitioning workloads simpler and easy to extend. Some of the key concepts are:
 
-The chemist state machine can be visualised with this figure:
+* `Platform`: represents the infrastructure *Chemist* is sitting on. Different platforms typically have completely different ways of discovery hosts and handling notifications. Every platform can have distinct, but fully-typed configuration settings.
 
-![image]({{ site.baseurl }}img/chemist-states.png)
+* `Target`: a target is a *Chemist* parlance for a monitorable endpoint. That endpoint is represented using a `Location`, `LocationIntent` and the actual URI to be connected too is derived from a `LocationTemplate`. This metadata about locations is typically derived from some platform-specific metadata (e.g. EC2 tags within AWS). There can - and typically are - multiple targets for a single given network host. This might because because of the location templates configured in chemist for that network scheme, or it might be because the host is servicing multiple applications. Whatever the case, its all `Target`s to chemist and it doesn't care.
+
+* `Discovery` and `Classifier`: In order to find `Target`s in the first place, *Chemist* has to have some way to discovery things, and thats where `Discovery` comes in. This is very `Platform` specific and as such, in order to provide the functionality needed for certain operational use cases, discovery has to find targets and then classify them as a mentionable target, or a flask collector that chemist can assign work too. By having a pluggable `Classifer`, you can integrate *Chemist* in nearly any environment and manage the operational aspects however you please. If you want to do something not supported out of the box, such as find your flasks by looking them up in zookeeper, just write a `Classifier` for it!
+ 
+* `Sharder` and `Distribution`: Given `Set[Target]`, a `Sharder` implementation can figure out which flask collectors should be assigned which targets. This is completely pluggable and non-restrictive on how you implement the sharing algorithm. Out of the box *Chemist* comes with a `RoundRobinSharder` and `RandomSharder`. The act of distributing these targets is represented using a `Distribution` which is essentially a map of flasks to targets.
+
+* `Pipeline` and `Plan`: the pipeline is the core of the stream transducer. It is the pipeline that makes up the chemist processing and it is completely pure up until the point where it passes a `Plan` to the specified `Sink`. `Plan` represents an outcome - for example, `Redistribute` - which is then actioned by the `Sink`. By separating intention from execution, the *Chemist* pipeline is completely testable without executing effects. 
 
 ### Chemist AWS
 
 For deployment to AWS, *Chemist* leverages the fact that auto-scalling groups can notify an SNS topic upon different lifecycle events happening which are associated to that group. For example, if a machine is terminated a notification is pushed to SNS detailing exactly what happened and to the specific instance(s). An SQS topic is then connected to this SNS topic, and *Chemist* consumes the incoming messages. SQS acts as a persistent queue, so if the chemist node fails, and a new chemist is brought back up from the auto-scalling group, it simply picks up where its predecessor left off.
+
+It is assumed that any deployment to AWS will be conducted using a [CloudFormation](https://aws.amazon.com/cloudformation/) (CFN) template, and that CFN template must create the SQS queue for this particular deployment. This is extremely important as SQS queues are essentially mutable state, and we don't want multiple deployments competing to read the same values from the mutable stack.
 
 ### Chemist Static
 

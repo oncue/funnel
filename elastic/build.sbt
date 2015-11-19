@@ -1,13 +1,5 @@
 
-import oncue.build._
-
-OnCue.baseSettings
-
-Custom.resources
-
-ScalaCheck.settings
-
-ScalaTest.settings
+common.settings
 
 fork in (run in Test) := true
 

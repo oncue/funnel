@@ -1,0 +1,230 @@
+{
+  "template" : "funnel-exploded*",
+  "order" : 10,
+  "mappings": {
+    "_default_" : {
+      "dynamic_templates" : [ {
+        "date_fields" : {
+          "mapping" : {
+            "type" : "date",
+            "doc_values": true,
+            "format" : "dateOptionalTime"
+          },
+          "match_mapping_type" : "date",
+          "match" : "*"
+        }
+      },
+      {
+        "byte_fields" : {
+          "mapping" : {
+            "type" : "byte",
+            "doc_values": true
+          },
+          "match_mapping_type" : "byte",
+          "match" : "*"
+        }
+      },
+      {
+        "double_fields" : {
+          "mapping" : {
+            "type" : "double",
+            "doc_values": true
+          },
+          "match_mapping_type" : "double",
+          "match" : "*"
+        }
+      },
+      {
+        "float_fields" : {
+          "mapping" : {
+            "type" : "float",
+            "doc_values": true
+          },
+          "match_mapping_type" : "float",
+          "match" : "*"
+        }
+      },
+      {
+        "integer_fields" : {
+          "mapping" : {
+            "type" : "integer",
+            "doc_values": true
+          },
+          "match_mapping_type" : "integer",
+          "match" : "*"
+        }
+      },
+      {
+        "long_fields" : {
+          "mapping" : {
+            "type" : "long",
+            "doc_values": true
+          },
+          "match_mapping_type" : "long",
+          "match" : "*"
+        }
+      },
+      {
+        "short_fields" : {
+          "mapping" : {
+            "type" : "short",
+            "doc_values": true
+          },
+          "match_mapping_type" : "short",
+          "match" : "*"
+        }
+      },
+      {
+        "string_fields" : {
+          "mapping" : {
+            "index" : "not_analyzed",
+            "omit_norms" : true,
+            "type" : "string",
+            "doc_values": true
+          },
+          "match_mapping_type" : "string",
+          "match" : "*"
+        }
+      }
+      ],
+      "_all" : {
+        "enabled" : true
+      },
+      "properties" : {
+        "@version" : {
+          "index" : "not_analyzed",
+          "type" : "string",
+          "doc_values": true
+        }
+      }
+    },
+    "metric": {
+      "dynamic_templates": [
+        {
+          "funnel_counter": {
+            "path_match": "*.counter",
+            "mapping": { "type": "integer" }
+          }
+        },
+        {
+          "funnel_timer_count": {
+            "path_match": "*.timer.count",
+            "mapping": { "type": "integer" }
+          }
+        },
+        {
+          "funnel_timer_variance": {
+            "path_match": "*.timer.variance",
+            "mapping": { "type": "double" }
+          }
+        },
+        {
+          "funnel_timer_kurtosis": {
+            "path_match": "*.timer.kurtosis",
+            "mapping": { "type": "double" }
+          }
+        },
+        {
+          "funnel_timer_mean": {
+            "path_match": "*.timer.mean",
+            "mapping": { "type": "double" }
+          }
+        },
+        {
+          "funnel_timer_last": {
+            "path_match": "*.timer.last",
+            "mapping": { "type": "double" }
+          }
+        },
+        {
+          "funnel_timer_skewness": {
+            "path_match": "*.timer.skewness",
+            "mapping": { "type": "double" }
+          }
+        },
+        {
+          "funnel_timer_standardDeviation": {
+            "path_match": "*.timer.standardDeviation",
+            "mapping": { "type": "double" }
+          }
+        },
+        {
+          "funnel_numeric_count": {
+            "path_match": "*.numeric.count",
+            "mapping": { "type": "integer" }
+          }
+        },
+        {
+          "funnel_numeric_variance": {
+            "path_match": "*.numeric.variance",
+            "mapping": { "type": "double" }
+          }
+        },
+        {
+          "funnel_numeric_kurtosis": {
+            "path_match": "*.numeric.kurtosis",
+            "mapping": { "type": "double" }
+          }
+        },
+        {
+          "funnel_numeric_mean": {
+            "path_match": "*.numeric.mean",
+            "mapping": { "type": "double" }
+          }
+        },
+        {
+          "funnel_numeric_last": {
+            "path_match": "*.numeric.last",
+            "mapping": { "type": "double" }
+          }
+        },
+        {
+          "funnel_numeric_skewness": {
+            "path_match": "*.numeric.skewness",
+            "mapping": { "type": "double" }
+          }
+        },
+        {
+          "funnel_numeric_standardDeviation": {
+            "path_match": "*.numeric.standardDeviation",
+            "mapping": { "type": "double" }
+          }
+        },
+        {
+          "funnel_traffic": {
+            "path_match": "*.traffic",
+            "mapping": { "type": "string", "index": "not_analyzed" }
+          }
+        },
+        {
+          "funnel_gauge": {
+            "path_match": "*.gauge",
+            "mapping": { "type": "string", "index": "not_analyzed" }
+          }
+        }
+      ],
+      "properties": {
+        "@timestamp": {
+          "type": "date",
+          "format": "dateOptionalTime"
+        },
+        "host": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "cluster": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "group": {
+          "type": "string",
+          "index": "not_analyzed"
+        },
+        "uri": {
+          "type": "string",
+          "index": "not_analyzed"
+        }
+      }
+    }
+  }
+}

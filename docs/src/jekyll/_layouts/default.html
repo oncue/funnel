@@ -40,8 +40,6 @@
                 <li><a href="{{ site.baseurl }}getting-started/developers.html">Developers</a></li>
                 <li><a href="{{ site.baseurl }}getting-started/operations.html">Operations</a></li>
                 <li><a href="{{ site.baseurl }}getting-started/faq.html">FAQ</a></li>
-                <li><a href="{{ site.baseurl }}getting-started/visualization.html">Visualizations</a></li>
-                <li><a href="{{ site.baseurl }}getting-started/migration.html">Migration Guides</a></li>
               </ol>
             </li>
           {% endif %}
@@ -51,9 +49,9 @@
           {% if page.section == 'modules' %}
             <li>
               <ol>
-                <li><a href="{{ site.baseurl }}modules/#elastic">Elastic Search</a></li>
+                <li><a href="{{ site.baseurl }}modules/#elastic-flattened">Elastic Search (flattened)</a></li>
+                <li><a href="{{ site.baseurl }}modules/#elastic-exploded">Elastic Search (exploded)</a></li>
                 <li><a href="{{ site.baseurl }}modules/#nginx">Nginx</a></li>
-                <li><a href="{{ site.baseurl }}modules/#riemann">Riemann</a></li>
                 <li><a href="{{ site.baseurl }}modules/#zeromq">ZeroMQ</a></li>
               </ol>
             </li>
@@ -82,5 +80,16 @@
         <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
       </footer>
     </div>
+
+    <script>
+      (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+      (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+      m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+      })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+      ga('create', 'UA-57263411-5', 'auto');
+      ga('send', 'pageview');
+
+    </script>
   </body>
 </html>
