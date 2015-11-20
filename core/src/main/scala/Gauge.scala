@@ -29,7 +29,7 @@ import scalaz.stream.{Sink, sink => Snk}
 trait Gauge[K,A] extends Instrument[K] { self =>
 
   /** UNSAFE. Set the value of the gauge to the given value. */
-  def set(a: A): Unit = setValue(a).run
+  def set(a: A): Unit = setValue(a).runAsync(_ => ())
 
   /** Set the value of the gauge to the given value */
   def setValue(a: A): Task[Unit]

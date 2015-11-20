@@ -19,72 +19,94 @@ package funnel
 import scala.concurrent.duration.Duration
 import scala.concurrent.{ExecutionContext, Future}
 import scalaz.concurrent.Task
+import scalaz.syntax.monad._
 
 /**
  * A `LapTimer` instrument is a compound instrument, which combines Timer and
- * Counter instruments. It adds counter to all the timer operations.
+ * Counter instruments. The counter counts the timer operations.
  *
- * An `LapTimer` should be constructed using the [[Instruments.lapTimer]] method.
+ * A `LapTimer` should be constructed using the [[Instruments.lapTimer]] method.
  */
 class LapTimer (
   timer: Timer[Periodic[Stats]],
   counter: Counter
 ) {
 
-  /** Record the given duration, in nanoseconds. */
-  def recordNanos(nanos: Long): Unit = {
-    counter.increment
-    timer.recordNanos(nanos)
-  }
+  /** UNSAFE. Record the given duration, in nanoseconds, and advance the lap counter. */
+  def recordNanos(nanos: Long): Unit = postNanos(nanos).runAsync(_ => ())
 
-  /** Record the given duration. */
-  def record(d: Duration): Unit = {
-    counter.increment
-    timer.record(d)
-  }
+  /** Record the given duration, in nanoseconds, and advance the lap counter. */
+  def postNanos(nanos: Long): Task[Unit] =
+    counter.advance >> timer.postNanos(nanos)
+
+  /** UNSAFE. Record the given duration. */
+  def record(d: Duration): Unit = post(d: Duration).runAsync(_ => ())
+
+  def post(d: Duration): Task[Unit] =
+    counter.advance >> timer.post(d)
 
   /**
-   * Return a newly running stopwatch. To record
-   * a time, call the returned stopwatch. Example:
-   *
-   *    val T: Timer = ...
-   *    val stopwatch = T.start
-   *    doSomeStuff()
-   *    // ... and we're done
-   *    stopwatch()
-   *    // alternately, `T.stop(stopwatch)`
-   *
-   * Reusing a stopwatch is not recommended; it will
-   * record the time since the stopwatch was first
-   * created.
+   * UNSAFE. Return a newly running stopwatch.
+   * See `Timer.start`
    */
   def start: () => Unit = {
     counter.increment
     timer.start
   }
 
-  /** A bit of syntax for stopping a stopwatch returned from `start`. */
+  /**
+   * Return a newly running stopwatch.
+   * See `Timer.startClock`
+   */
+  def startClock: Task[Timer.Clock] =
+    counter.advance >> timer.startClock
+
+  /** UNSAFE. A bit of syntax for stopping a stopwatch returned from `start`. */
   def stop(stopwatch: () => Unit): Unit = {
     timer.stop(stopwatch)
   }
+
+  /**
+   * UNSAFE. Evaluate `a` and record its evaluation time even if
+   * evaluation completes with an error. Use `timeSuccess`
+   * if you'd like to record a time only in the sucsessful case.
+   */
+  def time[A](a: => A): A =
+    measure(a).run
 
   /**
    * Evaluate `a` and record its evaluation time even if
    * evaluation completes with an error. Use `timeSuccess`
    * if you'd like to record a time only in the sucsessful case.
    */
-  def time[A](a: => A): A = {
-    counter.increment
-    timer.time(a)
-  }
+  def measure[A](a: => A): Task[A] =
+    counter.advance >> timer.measure(a)
+
+  /**
+   * UNSAFE. Like `time`, but records a time only if evaluation of
+   * `a` completes without error.
+   */
+  def timeSuccess[A](a: => A): A =
+    measureSuccess(a).run
 
   /**
    * Like `time`, but records a time only if evaluation of
    * `a` completes without error.
    */
-  def timeSuccess[A](a: => A): A = {
-    counter.increment
-    timer.timeSuccess(a)
+  def measureSuccess[A](a: => A): Task[A] =
+    counter.advance >> timer.measureSuccess(a)
+
+  /**
+   * UNSAFE. Time a `Future` by registering a callback on its
+   * `onComplete` method. The stopwatch begins now.
+   * This function records a time regardless if the `Future`
+   * completes with an error or not. Use `timeFutureSuccess` or
+   * explicit calls to `start` and `stop` if you'd like to
+   * record a time only in the event the `Future` succeeds.
+   */
+  def timeFuture[A](f: Future[A])(implicit ctx: ExecutionContext = ExecutionContext.Implicits.global): Future[A] = {
+    measureFuture(f).runAsync(_ => ())
+    f
   }
 
   /**
@@ -95,52 +117,58 @@ class LapTimer (
    * explicit calls to `start` and `stop` if you'd like to
    * record a time only in the event the `Future` succeeds.
    */
-  def timeFuture[A](f: Future[A])(implicit ctx: ExecutionContext = ExecutionContext.Implicits.global): Future[A] = {
-    counter.increment
-    timer.timeFuture(f)(ctx)
-  }
+  def measureFuture[A](f: Future[A])(implicit ctx: ExecutionContext = ExecutionContext.Implicits.global): Task[A] =
+    counter.advance >> timer.measureFuture(f)
 
   /**
-   * Like `timeFuture`, but records a time only if `f` completes
+   * UNSAFE. Like `timeFuture`, but records a time only if `f` completes
    * without an exception.
    */
-  def timeFutureSuccess[A](f: Future[A])(implicit ctx: ExecutionContext = ExecutionContext.Implicits.global): Future[A] = {
-    counter.increment
-    timer.timeFutureSuccess(f)(ctx)
-  }
+  def timeFutureSuccess[A](f: Future[A])(
+    implicit ctx: ExecutionContext = ExecutionContext.Implicits.global): Future[A] = {
+      measureFutureSuccess(f).runAsync(_ => ())
+      f
+    }
+
+  /**
+   * UNSAFE. Like `measureFuture`, but records a time only if `f` completes
+   * without an exception.
+   */
+  def measureFutureSuccess[A](f: Future[A])(
+    implicit ctx: ExecutionContext = ExecutionContext.Implicits.global): Task[A] =
+      counter.advance >> timer.measureFutureSuccess(f)
 
   /**
    * Time an asynchronous `Task`. The stopwatch begins running when
    * the returned `Task` is run and a stop time is recorded if the
-   * `Task` completes in any state. Use `timeTaskSuccess` if you
+   * `Task` completes in any state. Also advances the counter whether
+   * the task succeeds or not. Use `timeTaskSuccess` if you
    * wish to only record times when the `Task` succeeds.
    */
-  def timeTask[A](a: Task[A]): Task[A] = {
-    timer.timeTask(a) map { res =>
-      counter.increment
-      res
-    }
-  }
+  def timeTask[A](a: Task[A]): Task[A] =
+    timer.timeTask(a).onFinish(_ => counter.advance)
 
   /**
-   * Like `timeTask`, but records a time even if the `Task` completes
-   * with an error.
+   * Like `timeTask`, but records a time only if the `Task` completes
+   * without an error.
    */
-  def timeTaskSuccess[A](a: Task[A]): Task[A] = {
-    timer.timeTaskSuccess(a) map { res =>
-      counter.increment
-      res
-    }
-  }
+  def timeTaskSuccess[A](a: Task[A]): Task[A] =
+    timer.timeTaskSuccess(a) <* counter.advance
 
   /**
-   * Time a currently running asynchronous task. The
+   * UNSAFE. Time a currently running asynchronous task. The
    * stopwatch begins now, and finishes when the
    * callback is invoked with the result.
    */
-  def timeAsync[A](register: (A => Unit) => Unit): Unit = {
-    counter.increment
-    timer.timeAsync(register)
-  }
+  def timeAsync[A](register: (A => Unit) => Unit): Unit =
+    measureAsync(register).runAsync(_ => ())
+
+  /**
+   * Time an asynchronous task. The stopwatch begins
+   * when the returned `Task` is run, and finishes when the
+   * callback is invoked with the result.
+   */
+  def measureAsync[A](register: (A => Unit) => Unit): Task[A] =
+    counter.advance *> timer.measureAsync(register)
 
 }

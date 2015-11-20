@@ -27,12 +27,11 @@ import scalaz.\/
 import scalaz.\/._
 import scalaz.syntax.monad._
 
-
 trait Timer[K] extends Instrument[K] { self =>
 
   /** UNSAFE. Record the given duration, in nanoseconds. */
   def recordNanos(nanos: Long): Unit =
-    postNanos(nanos).run
+    postNanos(nanos).runAsync(_ => ())
 
   def record(d: Duration): Unit = recordNanos(d.toNanos)
 
@@ -40,7 +39,7 @@ trait Timer[K] extends Instrument[K] { self =>
   def postNanos(nanos: Long): Task[Unit]
 
   /** Record the given duration. */
-  def post(d: Duration): Unit = postNanos(d.toNanos)
+  def post(d: Duration): Task[Unit] = postNanos(d.toNanos)
 
   /**
    * UNSAFE. Returns a newly running clock. To record
@@ -59,12 +58,7 @@ trait Timer[K] extends Instrument[K] { self =>
    */
   def start: () => Unit = {
     val stopwatch = startClock.run
-    () => stopwatch.stop.run
-  }
-
-  /** Represents a running clock started at `startTime` */
-  case class Clock(startTime: Long) {
-    def stop: Task[Unit] = Task.delay(recordNanos(System.nanoTime - startTime))
+    () => stopwatch.stop.runAsync(_ => ())
   }
 
   /**
@@ -83,8 +77,11 @@ trait Timer[K] extends Instrument[K] { self =>
    * stopping will record the time since the clock
    * was first created.
    */
-  def startClock: Task[Clock] = Task.delay {
-    Clock(System.nanoTime)
+  def startClock: Task[Timer.Clock] = Task.delay {
+    new Timer.Clock {
+      val startTime = System.nanoTime
+      def stop = Task.delay(recordNanos(System.nanoTime - startTime))
+    }
   }
 
   /** UNSAFE. A bit of syntax for stopping a stopwatch returned from `start`. */
@@ -124,7 +121,7 @@ trait Timer[K] extends Instrument[K] { self =>
   } yield a
 
   /**
-   * Time a `Future` by registering a callback on its
+   * UNSAFE. Time a `Future` by registering a callback on its
    * `onComplete` method. The stopwatch begins now.
    * This function records a time regardless if the `Future`
    * completes with an error or not. Use `timeFutureSuccess` or
@@ -137,7 +134,19 @@ trait Timer[K] extends Instrument[K] { self =>
   }
 
   /**
-   * Like `timeFuture`, but records a time only if `f` completes
+   * Time a `Future` by registering a callback on its
+   * `onComplete` method. The stopwatch begins when the
+   * resulting `Task` is run. This function records a time
+   * regardless of whether the `Future` completes with an error.
+   * Use `measureFutureSuccess` explicit calls to `startClock`
+   * if you'd like to record a time only in the event the `Future` succeeds.
+   */
+  def measureFuture[A](f: Future[A])(
+    implicit ctx: ExecutionContext = ExecutionContext.Implicits.global): Task[A] =
+      measureAsync(f.onComplete).flatMap(t => Task.delay(t.get))
+
+  /**
+   * UNSAFE. Like `timeFuture`, but records a time only if `f` completes
    * without an exception.
    */
   def timeFutureSuccess[A](f: Future[A])(implicit ctx: ExecutionContext = ExecutionContext.Implicits.global): Future[A] = {
@@ -145,31 +154,34 @@ trait Timer[K] extends Instrument[K] { self =>
     f
   }
 
+  def measureFutureSuccess[A](f: Future[A])(implicit ctx: ExecutionContext = ExecutionContext.Implicits.global): Task[A] =
+    measureAsync((cb: A => Unit) => f.onSuccess({ case a => cb(a) }))
+
   /**
    * Time an asynchronous `Task`. The stopwatch begins running when
    * the returned `Task` is run and a stop time is recorded if the
    * `Task` completes in any state. Use `timeTaskSuccess` if you
    * wish to only record times when the `Task` succeeds.
    */
-  def timeTask[A](a: Task[A]): Task[A] =
-    Task.delay(start).flatMap { stopwatch =>
-      a.attempt.flatMap { a =>
-        stop(stopwatch)
-        a.fold(Task.fail, Task.now)
-      }
-    }
+  def timeTask[A](t: Task[A]): Task[A] = for {
+    c <- startClock
+    a <- t.attempt
+    _ <- c.stop
+    r <- a.fold(Task.fail, Task.now)
+  } yield r
 
   /**
-   * Like `timeTask`, but records a time even if the `Task` completes
-   * with an error.
+   * Like `timeTask`, but records a time only if the `Task` completes
+   * without an error.
    */
-  def timeTaskSuccess[A](a: Task[A]): Task[A] =
-    Task.delay(start).flatMap { stopwatch =>
-      a.map { a => stop(stopwatch); a }
-    }
+  def timeTaskSuccess[A](t: Task[A]): Task[A] = for {
+    c <- startClock
+    a <- t
+    _ <- c.stop
+  } yield a
 
   /**
-   * Time a currently running asynchronous task. The
+   * UNSAFE. Time a currently running asynchronous task. The
    * stopwatch begins now, and finishes when the
    * callback is invoked with the result.
    */
@@ -178,6 +190,11 @@ trait Timer[K] extends Instrument[K] { self =>
     register(_ => stop(stopwatch))
   }
 
+  /**
+   * Time an asynchronous task. The stopwatch begins when
+   * the returned `Task` is run, and finishes when the
+   * callback is invoked with the result.
+   */
   def measureAsync[A](register: (A => Unit) => Unit): Task[A] = for {
     c <- startClock
     a <- Task.async((k: (Throwable \/ A) => Unit) => register(a => k(right(a))))
@@ -232,4 +249,16 @@ trait Timer[K] extends Instrument[K] { self =>
       def keys = self.keys
     }
   }
+}
+
+object Timer {
+
+  /**
+   * Represents a running clock started at `startTime`.
+   * Use by `startClock` to provide a stoppable clock.
+   */
+  sealed abstract class Clock {
+    def stop: Task[Unit]
+  }
+
 }
