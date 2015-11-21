@@ -1,7 +1,16 @@
+---
 language: scala
 scala:
   - 2.10.5
 jdk:
   - oraclejdk8
-
-script: sbt ++$TRAVIS_SCALA_VERSION +test
+before_install:
+  - "mkdir -p ~/.sbt/gpg/ && mkdir -p ~/.bintray/"
+  - openssl aes-256-cbc -K $encrypted_cd28ec037f46_key -iv $encrypted_cd28ec037f46_iv -in .gpg.sbt.enc -out gpg.sbt -d
+  - openssl aes-256-cbc -K $encrypted_cd28ec037f46_key -iv $encrypted_cd28ec037f46_iv -in .secring.asc.enc -out ~/.sbt/gpg/secring.asc -d
+  - openssl aes-256-cbc -K $encrypted_cd28ec037f46_key -iv $encrypted_cd28ec037f46_iv -in .bintray.enc -out ~/.bintray/.credentials -d
+script: ./build.sh
+after_script:
+  - rm gpg.sbt
+  - rm ~/.sbt/gpg/secring.asc
+  - rm ~/.bintray/.credentials
