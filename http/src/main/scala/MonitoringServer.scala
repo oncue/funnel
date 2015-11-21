@@ -91,11 +91,13 @@ class MonitoringServer(M: Monitoring, port: Int, keyTTL: Duration = 36.hours) {
   }
 
   protected def handleKeys(M: Monitoring, prefix: String, req: HttpExchange): Unit = {
-    import JSON._; import argonaut.EncodeJson._
+    import argonaut.EncodeJson
     val query = keyQuery(req.getRequestURI)
     val ks = M.keys.continuous.once.runLastOr(Set.empty).run.filter(x =>
       x.startsWith(prefix) && query(x))
-    val respBytes = JSON.prettyEncode(ks).getBytes
+    // rcn: this cannot be derived implicitly when Key's type arg is Any
+    val enc = EncodeJson.TraversableOnceEncodeJson[Key[Any],Set](JSON.EncodeKey[Any], implicitly)
+    val respBytes = JSON.prettyEncode(ks)(enc).getBytes
     flush(200, respBytes, req)
   }
 
@@ -108,12 +110,14 @@ class MonitoringServer(M: Monitoring, port: Int, keyTTL: Duration = 36.hours) {
   }
 
   protected def handleNow(M: Monitoring, label: String, req: HttpExchange): Unit = {
-    import JSON._; import argonaut.EncodeJson._
+    import argonaut.EncodeJson
     val m = Monitoring.snapshot(M).run
+    // rcn: this cannot be derived implicitly when Datapoint's type arg is Any
+    val enc = EncodeJson.TraversableOnceEncodeJson[Datapoint[Any],List](JSON.EncodeDatapoint[Any], implicitly)
     val respBytes =
       JSON.prettyEncode(m.filterKeys(k =>
         k.startsWith(label) &&
-        keyQuery(req.getRequestURI)(k)).values.toList).getBytes
+        keyQuery(req.getRequestURI)(k)).values.toList)(enc).getBytes
     flush(200, respBytes, req)
   }
 

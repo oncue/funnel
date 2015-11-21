@@ -60,7 +60,7 @@ class MirroringIntegrationSpec extends FlatSpec with Matchers with BeforeAndAfte
 
   val KMI = MonitoringServer.start(MI, 5775)
 
-  override def beforeAll(){
+  override def beforeAll(): Unit = {
     addInstruments(I1)
     addInstruments(I2)
     addInstruments(I3)
@@ -75,7 +75,7 @@ class MirroringIntegrationSpec extends FlatSpec with Matchers with BeforeAndAfte
     Thread.sleep(W.toMillis * 2)
   }
 
-  override def afterAll(){
+  override def afterAll(): Unit = {
     // shutdown all the servers
     MS1.stop()
     MS2.stop()

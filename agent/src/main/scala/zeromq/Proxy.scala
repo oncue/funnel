@@ -22,10 +22,10 @@ import funnel.zeromq._
 import scalaz.stream.async.signalOf
 import scalaz.stream.async.mutable.Signal
 import scalaz.stream.Process
-import scalaz.concurrent.Task
+import scalaz.concurrent.{ Task, Strategy }
 
 class Proxy(I: Endpoint, O: Endpoint){
-  private val alive: Signal[Boolean] = signalOf[Boolean](true)
+  private val alive: Signal[Boolean] = signalOf[Boolean](true)(Strategy.Executor(Monitoring.defaultPool))
   private val stream: Process[Task,Boolean] =
     Ø.link(O)(alive)(s =>
       Ø.link(I)(alive)(Ø.receive

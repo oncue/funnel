@@ -58,7 +58,7 @@ class MirrorSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
       ).run.runAsync(_.fold(e => Ø.log.error(
         s"Error mirroring $uri: ${e.getMessage}"), identity))
 
-  override def beforeAll(){
+  override def beforeAll(): Unit = {
     if(Ø.isEnabled){
       addInstruments(I1)
       addInstruments(I2)
@@ -75,7 +75,7 @@ class MirrorSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
     }
   }
 
-  override def afterAll(){
+  override def afterAll(): Unit = {
     stop(S).run
   }
 

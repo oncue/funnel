@@ -63,7 +63,7 @@ object Events {
 
   /** An event which fires whenever either event fires. */
   def or(e1: Event, e2: Event): Event =
-    m => e1(m) merge e2(m)
+    m => e1(m).merge(e2(m))(P)
 
   /** An event which waits for both events to fire. */
   def and(e1: Event, e2: Event): Event =

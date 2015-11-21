@@ -56,7 +56,7 @@ class SubscriptionSpec extends FlatSpec
   // mirror previous to this instance
   lazy val MP = Monitoring.instance
 
-  override def beforeAll(){
+  override def beforeAll(): Unit = {
     addInstruments(I1)
     addInstruments(I2)
 
@@ -99,7 +99,7 @@ class SubscriptionSpec extends FlatSpec
                             s"Error mirroring $uri: ${e.getMessage}"), identity))
 
 
-  override def afterAll(){
+  override def afterAll(): Unit = {
     stop(S).run
   }
 

@@ -126,9 +126,9 @@ class Instruments(val monitoring: Monitoring = Monitoring.default,
     import Scalaz._
     val (ks, nps) =
       periodicBuffers(nowBuf, unit, label, units, description, keyMod)
-    val t = List(monitoring.topic(ks.now)(nps.one),
-                 monitoring.topic(ks.previous, true)(nps.two),
-                 monitoring.topic(ks.sliding)(nps.three)).traverse(
+    val t = List(monitoring.topicWithKey(ks.now)(nps.one),
+                 monitoring.topicWithKey(ks.previous, true)(nps.two),
+                 monitoring.topicWithKey(ks.sliding)(nps.three)).traverse(
       _.map(Kleisli(_))).map(_.traverseU_(identity)).map(_.run)
     (ks, t)
   }

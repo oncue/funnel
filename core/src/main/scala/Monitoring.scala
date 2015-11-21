@@ -60,10 +60,10 @@ trait Monitoring {
       buf: TBuffer[Option[I],O], costive: Boolean = false
     ): (Key[O], Task[I => Task[Unit]]) = {
       val k = keyMod(Key[O](name, units, description))
-      (k, topic(k, costive)(buf))
+      (k, topicWithKey(k, costive)(buf))
     }
 
-  def topic[I,O](
+  def topicWithKey[I,O](
     key: Key[O], costive: Boolean = false)(
     buf: TBuffer[Option[I],O]): Task[I => Task[Unit]]
 
@@ -97,7 +97,7 @@ trait Monitoring {
       _ <- proc.evalMap((o: O) => for {
         b <- exists(key)
         _ <- if (b) update(key, o)
-             else topic[O,O](key)(B.ignoreTickAndTime(process1.id))
+             else topicWithKey[O,O](key)(B.ignoreTickAndTime(process1.id))
       } yield ()).run
     } yield key).runAsync(_ => ()))
   }
@@ -203,7 +203,7 @@ trait Monitoring {
           update(k, pt.value)
         } else for {
           _ <- Task.delay(log.debug(s"$msg new key: $k"))
-          snk <- topic[Any,Any](k)(B.ignoreTickAndTime(process1.id))
+          snk <- topicWithKey[Any,Any](k)(B.ignoreTickAndTime(process1.id))
           r <- snk(pt.value)
         } yield r
       } yield ()
@@ -231,7 +231,7 @@ trait Monitoring {
   private def initialize[O](key: Key[O]): Task[Unit] = for {
     e <- exists(key)
     _ <- if (e) Task.delay {
-      topic[O,O](key)(B.ignoreTickAndTime(process1.id))
+      topicWithKey[O,O](key)(B.ignoreTickAndTime(process1.id))
     } else Task((o: O) => ())(defaultPool)
   } yield ()
 
@@ -275,7 +275,8 @@ trait Monitoring {
         reset
       }}
     }
-    e(this).zip(alive.continuous).map(_._1).either(pts)
+    val S = Strategy.Executor(Monitoring.defaultPool)
+    e(this).zip(alive.continuous).map(_._1).either(pts)(S)
            .scan(Vector(false,false))((acc,a) => acc.tail :+ a.isLeft)
            .filter { xs => xs forall (identity) }
            .evalMap { _ => log.debug(s"$msg no activity for '$f', resetting..."); reset }
@@ -286,28 +287,31 @@ trait Monitoring {
    * Remove keys from this `Monitoring` instance for which no updates are seen
    * between two triggerings of the event `e`.
    */
-  def keySenescence(e: Event, ks: Process[Task, Key[Any]]): Process[Task, Unit] = mergeN(ks.map { k =>
-    val alive = signalOf[Unit](())(Strategy.Sequential)
-    val pts = get(k).discrete.onComplete {
-      Process.eval_ { alive.close flatMap { _ =>
-        log.debug(s"Key senescence: no more data points for '${k.name}', removing...")
-        remove(k)
-      }}
-    }
-    e(this).zip(alive.continuous).map(_._1).either(pts)
-      .scan(Vector(false,false)) {
-        (acc, a) => acc.tail :+ a.isLeft
-      }.evalMap { v =>
-        if (v.forall(identity)) {
-          log.debug(s"Key senescence: no activity for '${k.name}' removing...")
-          alive.close >> remove(k)
-        } else {
-          Task.now(())
-        }
+  def keySenescence(e: Event, ks: Process[Task, Key[Any]]): Process[Task, Unit] = {
+    val S = Strategy.Executor(Monitoring.defaultPool)
+    mergeN(ks.map { k =>
+      val alive = signalOf[Unit](())(Strategy.Sequential)
+      val pts = get(k).discrete.onComplete {
+        Process.eval_ { alive.close flatMap { _ =>
+          log.debug(s"Key senescence: no more data points for '${k.name}', removing...")
+          remove(k)
+        }}
       }
-  }.onComplete {
-    Process.eval_(Task.delay(log.debug(s"Key senescence: keys exhausted.")))
-  }).onComplete(Process.eval(Task.delay(log.debug(s"Key senescence terminated."))))
+      e(this).zip(alive.continuous).map(_._1).either(pts)(S)
+        .scan(Vector(false,false)) {
+          (acc, a) => acc.tail :+ a.isLeft
+        }.evalMap { v =>
+          if (v.forall(identity)) {
+            log.debug(s"Key senescence: no activity for '${k.name}' removing...")
+            alive.close >> remove(k)
+          } else {
+            Task.now(())
+          }
+        }
+    }.onComplete {
+      Process.eval_(Task.delay(log.debug(s"Key senescence: keys exhausted.")))
+    })(S).onComplete(Process.eval(Task.delay(log.debug(s"Key senescence terminated."))))
+  }
 
   /** Return the elapsed time since this instance was started. */
   def elapsed: Duration
@@ -390,7 +394,10 @@ trait Monitoring {
   def dataDislodgement: Process[Task, Unit]
 
   // The time-varying set of keys that need to be periodically disembarrassed
-  val costiveKeys: Signal[Set[Key[Any]]] = signalOf(Set())
+  val costiveKeys: Signal[Set[Key[Any]]] = {
+    val S = Strategy.Executor(Monitoring.defaultPool)
+    signalOf(Set[Key[Any]]())(S)
+  }
 }
 
 object Monitoring {
@@ -466,7 +473,7 @@ object Monitoring {
         }
       }
 
-      def topic[I,O](k: Key[O], costive: Boolean = false)(buf: TBuffer[Option[I],O]): Task[I => Task[Unit]] = for {
+      def topicWithKey[I,O](k: Key[O], costive: Boolean = false)(buf: TBuffer[Option[I],O]): Task[I => Task[Unit]] = for {
         p <- bufferedSignal(buf)(ES)
         (pub, v) = p
         _ <- Task.delay(topics += (k -> eraseTopic(Topic(pub, v))))
@@ -506,8 +513,8 @@ object Monitoring {
   def subscribe(M: Monitoring)(f: Key[Any] => Boolean)(
   implicit ES: ExecutorService = serverPool):
       Process[Task, Datapoint[Any]] = {
-   def interleaveAll(p: Key[Any] => Boolean): Process[Task, Datapoint[Any]] =
-     scalaz.stream.merge.mergeN(M.distinctKeys.filter(p).map(k => points(k)))
+   def interleaveAll(p: Key[Any] => Boolean): Process[Task, Datapoint[Any]] = 
+     scalaz.stream.merge.mergeN(M.distinctKeys.filter(p).map(k => points(k)))(Strategy.Executor(ES))
    def points(k: Key[Any]): Process[Task, Datapoint[Any]] =
      M.get(k).discrete.map(Datapoint(k, _)).onComplete {
        Process.eval_(Task.delay(M.log.debug(s"unsubscribing: $k")))

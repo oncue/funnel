@@ -185,7 +185,7 @@ object Buffers {
   def stats: Process1[Double, Stats] =
     process1.id[Double].map(Stats.apply).scan1(_ ++ _)
 
-  def histogram[O <% Reportable[O]]: Process1[String,Histogram[O]] = ???
+  def histogram[O](implicit ev: O => Reportable[O]): Process1[String,Histogram[O]] = ???
 
   /**
    * Approximate count of unique `A` values using HyperLogLog algorithm.

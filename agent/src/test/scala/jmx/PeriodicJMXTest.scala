@@ -31,11 +31,11 @@ class PeriodicJMXTest extends FlatSpec with Matchers with BeforeAndAfterAll {
   // This apparently doesn't provide RMI access to JMX
   val server = new TestingServer(5678, false)
 
-  override def beforeAll {
+  override def beforeAll: Unit = {
     server.start()
   }
 
-  override def afterAll {
+  override def afterAll: Unit = {
     server.close()
   }
 

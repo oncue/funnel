@@ -7,7 +7,9 @@ prompt.settings
 
 organization in Global  := "oncue.funnel"
 
-scalaVersion in Global  := "2.10.5"
+scalaVersion in Global  := "2.11.7"
+
+crossScalaVersions := Seq("2.10.5", scalaVersion.value)
 
 parallelExecution in Global := false
 
