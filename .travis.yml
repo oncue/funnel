@@ -6,6 +6,7 @@ jdk:
   - oraclejdk8
 before_install:
   - "mkdir -p ~/.sbt/gpg/ && mkdir -p ~/.bintray/"
+  - env | grep encrypted_cd28ec037f46
   - openssl aes-256-cbc -K "$encrypted_cd28ec037f46_key" -iv "$encrypted_cd28ec037f46_iv" -in secrets.zip.enc -out secrets.zip -d
   - unzip secrets.zip
   - mv secrets/bintray ~/.bintray/.credentials
