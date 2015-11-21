@@ -6,11 +6,12 @@ jdk:
   - oraclejdk8
 before_install:
   - "mkdir -p ~/.sbt/gpg/ && mkdir -p ~/.bintray/"
-  - openssl aes-256-cbc -K $encrypted_cd28ec037f46_key -iv $encrypted_cd28ec037f46_iv -in .gpg.sbt.enc -out gpg.sbt -d
-  - openssl aes-256-cbc -K $encrypted_cd28ec037f46_key -iv $encrypted_cd28ec037f46_iv -in .secring.asc.enc -out ~/.sbt/gpg/secring.asc -d
-  - openssl aes-256-cbc -K $encrypted_cd28ec037f46_key -iv $encrypted_cd28ec037f46_iv -in .bintray.enc -out ~/.bintray/.credentials -d
+  - "openssl aes-256-cbc -K $encrypted_cd28ec037f46_key -iv $encrypted_cd28ec037f46_iv -in secrets.zip.enc -out secrets.zip -d"
+  - unzip secrets.zip
+  - mv secrets/bintray ~/.bintray/.credentials
+  - mv secrets/secring.asc ~/.sbt/gpg/secring.asc
+  - mv secrets/gpg.sbt gpg.sbt
+  - rm secrets.zip
 script: ./build.sh
 after_script:
-  - rm gpg.sbt
-  - rm ~/.sbt/gpg/secring.asc
-  - rm ~/.bintray/.credentials
+  - rm -rf secrets

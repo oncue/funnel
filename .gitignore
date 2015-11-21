@@ -26,3 +26,6 @@ tags
 _site
 *.local.yml
 gpg.sbt
+encrypt.sh
+secrets.zip
+secrets
