@@ -63,8 +63,8 @@ object Cache {
  */
 trait Cache[K, V] {
   def get(key:K):Option[V]
-  def put(key:K, value:V)
-  def invalidate(key:K)
+  def put(key:K, value:V): Unit
+  def invalidate(key:K): Unit
 }
 
 /**

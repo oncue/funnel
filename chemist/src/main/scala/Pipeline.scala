@@ -181,10 +181,12 @@ object Pipeline {
   )(dsc: Discovery,
     shd: Sharder,
     http: dispatch.Http
-  ): Process[Task, Context[Plan]] =
+  ): Process[Task, Context[Plan]] = {
+    val S = Strategy.Executor(Chemist.defaultPool)
     discovery(pollInterval)(dsc, collect(http)(_))
-      .wye(lifecycle)(wye.merge)
+      .wye(lifecycle)(wye.merge)(S)
       .map(transform(dsc,shd))
+  }
 
   // needs error handling
   def task(

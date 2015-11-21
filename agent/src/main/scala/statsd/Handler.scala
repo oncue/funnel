@@ -24,7 +24,7 @@ import io.netty.channel.socket.DatagramPacket
 import io.netty.util.CharsetUtil
 
 class Handler(prefix: String, I: Instruments) extends SimpleChannelInboundHandler[DatagramPacket]{
-  override def channelRead0(ctx: ChannelHandlerContext, packet: DatagramPacket){
+  override def channelRead0(ctx: ChannelHandlerContext, packet: DatagramPacket): Unit = {
     val msg: String = packet.content.toString(CharsetUtil.UTF_8)
     msg.trim.split("\n").foreach { line: String =>
       if(line.trim.length > 0) {
@@ -37,11 +37,11 @@ class Handler(prefix: String, I: Instruments) extends SimpleChannelInboundHandle
     }
   }
 
-  override def channelReadComplete(ctx: ChannelHandlerContext) {
+  override def channelReadComplete(ctx: ChannelHandlerContext): Unit = {
     ctx.flush()
   }
 
-  override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable) {
+  override def exceptionCaught(ctx: ChannelHandlerContext, cause: Throwable): Unit = {
     cause.printStackTrace()
     // We don't close the channel because we can keep serving requests.
   }
