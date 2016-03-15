@@ -16,7 +16,7 @@ libraryDependencies += "oncue.funnel" %% "http" % "x.y.z"
 
 Current transitive dependencies introduced on your classpath:
 
-- [Scalaz](https://github.com/scalaz/scalaz) 7.1.0
+- [Scalaz](https://github.com/scalaz/scalaz) 7.1.1
 - [Scalaz Stream](https://github.com/scalaz/scalaz-stream) 0.7.3a
 - [Algebird Core](https://github.com/twitter/algebird) 0.8.0
 

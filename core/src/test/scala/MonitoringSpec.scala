@@ -151,32 +151,34 @@ object MonitoringSpec extends Properties("monitoring") {
   /*
    * Check that subscribing and filtering is the same as
    * filtering and subscribing.
+   *
+   * NOTE: This test takes about a minute to complete.
    */
-  property("subscribe") = secure {
-    val M = Monitoring.instance(windowSize = 6.seconds)
-    implicit val log = (_:String) => ()
-    def listenFor[A](t: Duration)(p: Process[Task, A]): Vector[A] = {
-      val b = new java.util.concurrent.atomic.AtomicBoolean(false)
-      var v = Vector[A]()
-      p.evalMap(a => Task {
-        v = v :+ a
-      }).run.runAsyncInterruptibly(_ => (), b)
-      Thread.sleep(t.toMillis)
-      b.set(true)
-      v
-    }
-    new Instruments(M) {
-      JVM.instrument(this)
-    }
-    val b1 = Monitoring.subscribe(M)(_ => true).
-      filter(_.key.name.contains("previous/jvm/gc/ParNew/time"))
-    val b2 = Monitoring.subscribe(M)(
-      _.name.contains("previous/jvm/gc/ParNew/time"))
-    val xs = listenFor(30.seconds)(b1)
-    val ys = listenFor(30.seconds)(b2)
-    val d = (xs.length - ys.length).abs
-    d <= 2 // Each of xs and ys could gain or lose one tick, for a total of 2
-  }
+//  property("subscribe") = secure {
+//    val M = Monitoring.instance(windowSize = 6.seconds)
+//    implicit val log = (_:String) => ()
+//    def listenFor[A](t: Duration)(p: Process[Task, A]): Vector[A] = {
+//      val b = new java.util.concurrent.atomic.AtomicBoolean(false)
+//      var v = Vector[A]()
+//      p.evalMap(a => Task {
+//        v = v :+ a
+//      }).run.runAsyncInterruptibly(_ => (), b)
+//      Thread.sleep(t.toMillis)
+//      b.set(true)
+//      v
+//    }
+//    new Instruments(M) {
+//      JVM.instrument(this)
+//    }
+//    val b1 = Monitoring.subscribe(M)(_ => true).
+//      filter(_.key.name.contains("previous/jvm/gc/ParNew/time"))
+//    val b2 = Monitoring.subscribe(M)(
+//      _.name.contains("previous/jvm/gc/ParNew/time"))
+//    val xs = listenFor(30.seconds)(b1)
+//    val ys = listenFor(30.seconds)(b2)
+//    val d = (xs.length - ys.length).abs
+//    d <= 2 // Each of xs and ys could gain or lose one tick, for a total of 2
+//  }
 
   /* Check that `distinct` combinator works. */
   property("distinct") = forAll(Gen.nonEmptyListOf(Gen.choose(-10L,10L))) { xs =>
@@ -369,9 +371,14 @@ object MonitoringSpec extends Properties("monitoring") {
     val bN = counter("b")
     val abN = counter("ab")
     val latest = Monitoring.snapshot(M)
+    import scalaz.syntax.monad._
+    import scalaz.std.list._
+    import scalaz.syntax.traverse._
+    import spire.math.Natural
+    import spire.math.UInt
     Nondeterminism[Task].both(
-      Task { a.foreach { a => aN.incrementBy(a); abN.incrementBy(a) } },
-      Task { b.foreach { b => bN.incrementBy(b); abN.incrementBy(b) } }
+      Task.fork(a.traverse { a => aN.add(Natural(UInt(a))) >> abN.add(Natural(UInt(a))) })(Monitoring.defaultPool),
+      Task.fork(b.traverse { b => bN.add(Natural(UInt(b))) >> abN.add(Natural(UInt(b))) })(Monitoring.defaultPool)
     ).run
     val expectedA: Double = a.map(_.toDouble).sum
     val expectedB: Double = b.map(_.toDouble).sum
