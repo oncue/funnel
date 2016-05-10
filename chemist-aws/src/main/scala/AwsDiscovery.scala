@@ -144,18 +144,6 @@ class AwsDiscovery(
    * @see funnel.chemist.AwsDiscovery.lookupOne
    */
   protected def lookupMany(ids: Seq[String]): Task[Seq[AwsInstance]] = {
-    def lookInCache: (Seq[String], Seq[AwsInstance]) =
-      ids.map(
-        id => id -> cache.get(id)
-      ).foldLeft[(Seq[String], Seq[AwsInstance])]((Seq.empty, Seq.empty)) {
-        (a,b) =>
-          val (ids,instances) = a
-          b match {
-            case (id,Some(instance)) => (ids, instances :+ instance)
-            case (id,None) => (ids :+ id, instances)
-          }
-      }
-
     def lookInAws(specificIds: Seq[String]): Task[Seq[AwsInstance]] =
       if (specificIds.isEmpty)
         Task.now(Seq.empty)
@@ -176,19 +164,16 @@ class AwsDiscovery(
             Task.fail(t)
         }
 
-    def updateCache(instances: Seq[AwsInstance]): Task[Seq[AwsInstance]] =
-      Task.delay {
-        log.debug(s"[lookupMany] updating the cache, items=${instances.length}.")
-        instances.foreach(i => cache.put(i.id, i))
-        instances
-      }
-
-    val (missing, found) = lookInCache
+    val (missing, found) = cache lookup ids
 
     if (missing.nonEmpty)
       log.info(s"[lookupMany] missing=${missing.length}, cached=${found.length}")
 
-    lookInAws(missing).flatMap(updateCache).map(_ ++ found)
+    lookInAws(missing).flatMap(is =>
+      Task.delay {
+        cache.putAll(is.map(i => (i.id, i)))
+        is
+      }).map(_ ++ found)
   }
 
   ///////////////////////////// internal api /////////////////////////////
