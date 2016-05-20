@@ -18,6 +18,8 @@ package funnel
 package chemist
 
 import java.io.File
+import scalaz.Kleisli
+import scalaz.concurrent.Task
 import knobs.{Config => KConfig}
 import knobs.{FileResource,ClassPathResource,Required}
 
@@ -28,6 +30,7 @@ import knobs.{FileResource,ClassPathResource,Required}
  */
 trait Platform {
   type Config <: PlatformConfig
+  type ChemistK[U] = Kleisli[Task, this.type, U]
 
   lazy val defaultKnobs =
     knobs.loadImmutable(Required(
@@ -36,3 +39,4 @@ trait Platform {
 
   def config: Config
 }
+

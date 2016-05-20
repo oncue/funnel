@@ -17,7 +17,9 @@
 package funnel
 package chemist
 
+import scalaz.Kleisli
 import scalaz.concurrent.Task
+import scalaz.Monad
 
 /**
  * Classifier is required by all `Discovery` instances, and
@@ -26,8 +28,10 @@ import scalaz.concurrent.Task
  *
  * @see funnel.chemist.Classification
  */
-trait Classifier[A] {
-  def task: Task[A => Classification]
+trait Classifier[P <: Platform, A] {
+  def classify(a: A): Task[Classification]
+  val kleisli: Kleisli[Task,A,Classification] =
+    Kleisli[Task,A,Classification](classify)
 }
 
 /**

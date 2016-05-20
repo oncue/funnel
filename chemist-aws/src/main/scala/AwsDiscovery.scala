@@ -23,8 +23,10 @@ import scala.collection.JavaConverters._
 import scalaz.concurrent.Task
 import scalaz.{\/,NonEmptyList,Nondeterminism}
 import scalaz.std.vector._
+import scalaz.syntax.std.vector._
 import scalaz.syntax.monadPlus._
 import scalaz.syntax.std.option._
+import scalaz.Kleisli._
 import com.amazonaws.services.autoscaling.AmazonAutoScaling
 import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.model.{Instance => AWSInstance}
@@ -44,7 +46,7 @@ import funnel.aws._
 class AwsDiscovery(
   ec2: AmazonEC2,
   asg: AmazonAutoScaling,
-  classifier: Classifier[AwsInstance],
+  classifier: Classifier[Aws,AwsInstance],
   resourceTemplates: Seq[LocationTemplate],
   cacheMaxSize: Int = 2000
 ) extends Discovery {
@@ -62,7 +64,7 @@ class AwsDiscovery(
     maximumSize = Some(cacheMaxSize))
 
   private val allTemplates: Map[NetworkScheme, Seq[LocationTemplate]] =
-    NetworkScheme.all.foldLeft(Map.empty[NetworkScheme,Seq[LocationTemplate]]){ (a,b) =>
+    NetworkScheme.all.foldLeft(Map.empty[NetworkScheme,Seq[LocationTemplate]]) { (a,b) =>
       a + (b -> resourceTemplates.filter(_.has(b)))
     }
 
@@ -81,20 +83,19 @@ class AwsDiscovery(
   def inventory: Task[DiscoveryInventory] = ListInventory.timeTask {
     for {
       a <- readAutoScalingGroups
-      b <- classifier.task
 
       _ = metrics.model.hostsTotal.set(a.size)
-      m = a.filter((b andThen isMonitorable)(_))
+      m <- a.toVector.filterM(classifier.kleisli.map(isMonitorable).apply)
       _ = metrics.model.hostsValid.set(m.size)
 
       v <- valid(a)
       um = a.toSet &~ v.toSet
       _ = metrics.model.hostsInValid.set(um.size)
 
-      af = a.filter((b andThen isActiveFlask)(_))
+      af <- a.toVector.filterM(classifier.kleisli.map(isActiveFlask).apply)
       _ = metrics.model.hostsActiveFlask.set(af.size)
 
-      f = a.filter((b andThen isFlask)(_))
+      f <- a.toVector.filterM(classifier.kleisli.map(isFlask).apply)
       _ = metrics.model.hostsFlask.set(f.size)
 
       _  = log.info(s"[inventory] instances=${a.size}, monitorable=${m.size}, unmonitorable=${um.size} activeFlasks=${af.size} flasks=${af.size}")
@@ -213,10 +214,9 @@ class AwsDiscovery(
   private def instances(g: Classification => Boolean): Task[Seq[AwsInstance]] =
     for {
       a <- readAutoScalingGroups
-      b <- classifier.task
-      c  = b andThen g
+      c  = classifier.kleisli.map(g)
       // apply the specified filter if we want to remove specific groups for a reason
-      d  = a.filter(c(_))
+      d <- a.toVector.filterM(c(_))
       // _  = println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
       // _  = a.filter(c(_)).foreach { i => println(s"i: ${i.application.map(_.name)} -> ${b(i)} -> ${c(i)}") }
       // _  = println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")

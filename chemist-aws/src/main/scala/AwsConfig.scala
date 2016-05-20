@@ -52,7 +52,7 @@ case class AwsConfig(
   cfn: AmazonCloudFormation,
   commandTimeout: Duration,
   sharder: Sharder,
-  classifier: Classifier[AwsInstance],
+  classifier: Classifier[Aws,AwsInstance],
   state: StateCache,
   rediscoveryInterval: Duration
 ) extends PlatformConfig {
@@ -96,7 +96,7 @@ object AwsConfig {
     )
   }
 
-  private def readClassifier(c: Option[String]): Classifier[AwsInstance] =
+  private def readClassifier(c: Option[String]): Classifier[Aws,AwsInstance] =
     c match {
       case Some("default") => DefaultClassifier
       case _               => DefaultClassifier
