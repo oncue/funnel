@@ -34,7 +34,7 @@ import scalaz.Kleisli
  *
  * It is highly recommended you override this with your own classification logic.
  */
-object DefaultClassifier extends Classifier[Aws,AwsInstance] {
+object DefaultClassifier extends Classifier[AwsInstance] {
   import Classification._
 
   private[funnel] val Flask = "flask"

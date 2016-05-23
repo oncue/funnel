@@ -46,7 +46,7 @@ import funnel.aws._
 class AwsDiscovery(
   ec2: AmazonEC2,
   asg: AmazonAutoScaling,
-  classifier: Classifier[Aws,AwsInstance],
+  classifier: Classifier[AwsInstance],
   resourceTemplates: Seq[LocationTemplate],
   cacheMaxSize: Int = 2000
 ) extends Discovery {

@@ -28,7 +28,7 @@ import scalaz.Monad
  *
  * @see funnel.chemist.Classification
  */
-trait Classifier[P <: Platform, A] {
+trait Classifier[A] {
   def classify(a: A): Task[Classification]
   val kleisli: Kleisli[Task,A,Classification] =
     Kleisli[Task,A,Classification](classify)
