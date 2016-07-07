@@ -50,7 +50,7 @@ object MonitoringServer {
   }
 }
 
-class MonitoringServer(M: Monitoring, port: Int, keyTTL: Duration = 36.hours, streamTimeout: Duration = 200 milliseconds) {
+class MonitoringServer(M: Monitoring, port: Int, keyTTL: Duration = 36.hours, streamTimeout: Duration = 1 second) {
   import MonitoringServer._
 
   private val server = HttpServer.create(new InetSocketAddress(port), 0)
