@@ -21,6 +21,7 @@ import argonaut.{DecodeJson, EncodeJson}
 import java.io.InputStream
 import java.util.concurrent.ExecutorService
 import java.net.{URL,URI}
+import scala.concurrent.duration.Duration
 import scalaz.\/
 import scalaz.concurrent.Task
 import scalaz.stream._
@@ -40,10 +41,10 @@ object SSE {
    * thread indefinitely.
    */
   def writeEvents(events: Process[Task, Datapoint[Any]],
-                  sink: java.io.Writer): Unit =
+                  sink: java.io.Writer, timeout: Duration): Unit =
     events.map(kv => s"event: reportable\n${dataEncode(kv)(EncodeDatapoint[Any])}\n")
           .intersperse("\n")
-          .flatMap(writeTo(sink))
+          .flatMap(writeTo(sink, timeout))
           .run.run
 
   /**
@@ -51,19 +52,19 @@ object SSE {
    * of the given keys to the given `Writer`. This will block the calling
    * thread indefinitely.
    */
-  def writeKeys(events: Process[Task, Key[Any]], sink: java.io.Writer): Unit =
+  def writeKeys(events: Process[Task, Key[Any]], sink: java.io.Writer, timeout: Duration): Unit =
     events.map(k => s"event: key\n${dataEncode(k)}\n")
           .intersperse("\n")
-          .map(writeTo(sink))
+          .map(writeTo(sink, timeout))
           .run.run
 
-  private def writeTo(sink: java.io.Writer): String => Process[Task, Unit] =
+  private def writeTo(sink: java.io.Writer, timeout: Duration): String => Process[Task, Unit] =
     line => Process.eval(Task {
       sink.write(line)
       sink.flush // this is a line-oriented protocol,
                  // so we flush after each line, otherwise
                  // consumer may get delayed messages
-    }.attempt).flatMap(_.fold(e => e match {
+    }.attempt.timed(timeout)).flatMap(_.fold(e => e match {
       case x: java.io.IOException =>
       // when client disconnects we'll get a broken pipe
       // IOException from the above `sink.write`. This
