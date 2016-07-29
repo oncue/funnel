@@ -132,10 +132,14 @@ class Instruments(val monitoring: Monitoring = Monitoring.default,
 
     log.debug(s"adding keys from periodic of $ks and the triple Buffer of $nps")
 
-    val t = List(monitoring.topicWithKey(ks.now)(nps.one),
-                 monitoring.topicWithKey(ks.previous, true)(nps.two),
-                 monitoring.topicWithKey(ks.sliding)(nps.three)).traverse(
-      _.map(Kleisli(_))).map(_.traverseU_(identity)).map(_.run)
+    val t1: List[Task[I => Task[Unit]]] =
+      List(monitoring.topicWithKey(ks.now)(nps.one),
+           monitoring.topicWithKey(ks.previous, true)(nps.two),
+           monitoring.topicWithKey(ks.sliding)(nps.three))
+
+    val t2: Task[List[Kleisli[Task, I, Unit]]] = t1.traverse(_.map(Kleisli(_)))
+    val t3: Task[Kleisli[Task, I, Unit]]       = t2.map(_.traverseU_(identity))
+    val t = t3.map(_.run)
     (ks, t)
   }
 
