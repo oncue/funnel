@@ -44,7 +44,7 @@ class LifecycleSpec extends FlatSpec with Matchers {
 
   private def fromStream(sqs: AmazonSQS, asg: AmazonAutoScaling): Option[PlatformEvent] =
     Lifecycle.stream("name-of-queue", Process.emit(1))(sqs, asg, ec2, dsc
-      ).runLast.run // never do this anywhere but tests
+      ).runLast.unsafePerformSync // never do this anywhere but tests
 
   behavior of "the stream"
 
@@ -68,8 +68,8 @@ class LifecycleSpec extends FlatSpec with Matchers {
       ).traverse(Lifecycle.interpreter(_)(asg1, ec2, dsc))
 
   it should "parse messages and produce the right action" in {
-    val \/-(Seq(NewFlask(f))) = check(Fixtures.asgEvent(Launch, instanceId = "i-flaskAAA")).run
+    val \/-(Seq(NewFlask(f))) = check(Fixtures.asgEvent(Launch, instanceId = "i-flaskAAA")).unsafePerformSync
     f.id.value should equal("i-flaskAAA")
-    check("INVALID-MESSAGE").map(_ => true).run should equal (true)
+    check("INVALID-MESSAGE").map(_ => true).unsafePerformSync should equal (true)
   }
 }

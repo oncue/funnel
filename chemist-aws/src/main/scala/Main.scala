@@ -38,7 +38,7 @@ object Main {
           ClassPathResource("oncue/chemist-aws.defaults.cfg")) :: Nil)
         d  = a ++ b ++ c
         _  = log.debug(s"chemist is being configured with knobs: $d")
-      } yield AwsConfig.readConfig(d)).run
+      } yield AwsConfig.readConfig(d)).unsafePerformSync
     }
 
     val monitoring = MonitoringServer.start(Monitoring.default, 5775)

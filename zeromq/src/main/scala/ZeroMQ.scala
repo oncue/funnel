@@ -195,7 +195,7 @@ object ZeroMQ {
         Task {
           log.warn(s"Trying to close context in thread '${Thread.currentThread.getName}'")
           c.context.close()
-        }.runAsync(e => log.warn(s"Result of closing context was: $e"))
+        }.unsafePerformAsync(e => log.warn(s"Result of closing context was: $e"))
       } catch {
         case e: java.nio.channels.ClosedChannelException => ()
       }

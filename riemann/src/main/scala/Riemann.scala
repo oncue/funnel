@@ -38,7 +38,7 @@ object Riemann {
 
     time.awakeEvery(1.minute)(S, P).evalMap {_ =>
       Task(a(Flush))
-    }.run.runAsync(_ => ())
+    }.run.unsafePerformAsync(_ => ())
 
     a
   }

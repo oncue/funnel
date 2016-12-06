@@ -50,7 +50,7 @@ object Server {
     // do the ASCII art
     log.info(Banner.text)
 
-    chemist.init(platform).runAsync {
+    chemist.init(platform).unsafePerformAsync {
       case -\/(err) =>
         log.error(s"FATAL: Unable to initialize the chemist service. Failed with error: $err")
         err.printStackTrace()
@@ -76,7 +76,7 @@ class Server[U <: Platform](val chemist: Chemist[U], val platform: U) extends cy
   import Server._
 
   protected def json[A : EncodeJson](a: ChemistK[A]) =
-    a(platform).attemptRun.fold(
+    a(platform).unsafePerformSyncAttempt.fold(
       e => {
         log.error(s"Unable to process response: ${e.toString} - ${e.getMessage}")
         e.printStackTrace()

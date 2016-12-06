@@ -40,10 +40,10 @@ class DefaultClassifierSpec extends FlatSpec with Matchers {
   ), null)
 
   it should "make the right assertions about flasks" in {
-    DefaultClassifier.task.run(f1) should equal (ActiveFlask)
+    DefaultClassifier.task.unsafePerformSync(f1) should equal (ActiveFlask)
   }
 
   it should "make the right assertions about targets" in {
-    DefaultClassifier.task.run(t1) should equal (ActiveTarget)
+    DefaultClassifier.task.unsafePerformSync(t1) should equal (ActiveTarget)
   }
 }

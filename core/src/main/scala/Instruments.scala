@@ -70,7 +70,7 @@ class Instruments(val monitoring: Monitoring = Monitoring.default,
       val c = new PeriodicGauge[O] {
         val (ks, f) = nowPrevSliding(
           B.accum[O,O](init)(O.plus), identity[O],
-          label, units, description, kinded).map(_.run)
+          label, units, description, kinded).map(_.unsafePerformSync)
         def append(n: O): Unit = {
           runLogging(f(n))
         }
@@ -166,7 +166,7 @@ class Instruments(val monitoring: Monitoring = Monitoring.default,
                                      keyMod: Key[Double] => Key[Double] = identity): Gauge[Continuous[Double], Unit] = {
     val kinded = andKind("elapsed", keyMod)
     val (k, snk) = monitoring.topic[Unit,Double](label, Units.Seconds, desc, kinded)(
-      B.currentElapsed(window).map(_.toSeconds.toDouble)).map(_.run)
+      B.currentElapsed(window).map(_.toSeconds.toDouble)).map(_.unsafePerformSync)
     val g = new Gauge[Continuous[Double], Unit] {
       def set(u: Unit) = runLogging(snk(u))
       def keys = Continuous(k)
@@ -184,7 +184,7 @@ class Instruments(val monitoring: Monitoring = Monitoring.default,
                                        desc: String): Gauge[Continuous[Double], Unit] = {
     val kinded = andKind("remaining", identity[Key[Double]])
     val (k, snk) = monitoring.topic[Unit,Double](label, Units.Seconds, desc, kinded)(
-      B.currentRemaining(window).map(_.toSeconds.toDouble)).map(_.run)
+      B.currentRemaining(window).map(_.toSeconds.toDouble)).map(_.unsafePerformSync)
     val g = new Gauge[Continuous[Double], Unit] {
       def set(u: Unit) = runLogging(snk(u))
       def keys = Continuous(k)
@@ -203,7 +203,7 @@ class Instruments(val monitoring: Monitoring = Monitoring.default,
                                                  Units.Minutes,
                                                  "Time elapsed since monitoring started",
                                                  kinded)(
-      B.elapsed.map(_.toSeconds.toDouble / 60)).map(_.run)
+      B.elapsed.map(_.toSeconds.toDouble / 60)).map(_.unsafePerformSync)
     val g = new Gauge[Continuous[Double], Unit] {
       def set(u: Unit) = runLogging(snk(u))
       def keys = Continuous(k)
@@ -225,7 +225,7 @@ class Instruments(val monitoring: Monitoring = Monitoring.default,
     val kinded = andKind("gauge",keyMod)
     val g = new Gauge[Continuous[A],A] {
       val (key, snk) = monitoring.topic(s"now/${label.trim}", units, description, kinded)(
-        B.ignoreTick(B.resetEvery(window)(B.variable(init)))).map(_.run)
+        B.ignoreTick(B.resetEvery(window)(B.variable(init)))).map(_.unsafePerformSync)
       def set(a: A) = runLogging(snk(_ => a))
       def keys = Continuous(key)
 
@@ -300,7 +300,7 @@ class Instruments(val monitoring: Monitoring = Monitoring.default,
     val kinded = andKind("numeric", keyMod)
     val g = new Gauge[Periodic[Stats],Double] {
       val (ks, f) =
-        nowPrevSliding(B.stats, Stats(_:Double), label, units, description, kinded).map(_.run)
+        nowPrevSliding(B.stats, Stats(_:Double), label, units, description, kinded).map(_.unsafePerformSync)
       def keys = ks
       def set(d: Double): Unit = runLogging(f(d))
       set(init)
@@ -320,7 +320,7 @@ class Instruments(val monitoring: Monitoring = Monitoring.default,
     val t = new Timer[Periodic[Stats]] {
       val u: Units = Units.Duration(TimeUnit.MILLISECONDS)
       val (ks, f) =
-        nowPrevSliding(B.stats, Stats(_:Double), label, u, description, kinded).map(_.run)
+        nowPrevSliding(B.stats, Stats(_:Double), label, u, description, kinded).map(_.unsafePerformSync)
       def keys = ks
       def recordNanos(nanos: Long): Unit = {
         // record time in milliseconds

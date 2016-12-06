@@ -42,10 +42,10 @@ class ExplodedSpec extends FlatSpec with Matchers {
       Process(Option.empty[Datapoint[Any]])
     val input = timeout.wye(dps ++ time.sleep(15.seconds)(S, scheduler))(wye.merge)(S).translate(lift)
     val ogs = input |> E.elasticGroup(List("k"))
-    val result = ogs.runLast.run(cfg).run
+    val result = ogs.runLast.run(cfg).unsafePerformSync
     result should be ('defined)
     val gs = result.get
-    gs.size shouldBe >= (dps.runLog.run.size)
+    gs.size shouldBe >= (dps.runLog.unsafePerformSync.size)
   }
 }
 

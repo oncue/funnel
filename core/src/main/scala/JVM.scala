@@ -53,7 +53,7 @@ object JVM {
       time.awakeEvery(t)(ST,TS).map { _ =>
         numCollections.set(gc.getCollectionCount.toDouble)
         collectionTime.set(gc.getCollectionTime.toDouble)
-      }.run.runAsync(_ => ())
+      }.run.unsafePerformAsync(_ => ())
     }
 
     def TC(state: Thread.State) =
@@ -123,6 +123,6 @@ object JVM {
       waitingThreads.set(threadCount(Thread.State.WAITING))
       timedWaitingThreads.set(threadCount(Thread.State.TIMED_WAITING))
       terminatedThreads.set(threadCount(Thread.State.TERMINATED))
-    }.run.runAsync(_ => ())
+    }.run.unsafePerformAsync(_ => ())
   }
 }

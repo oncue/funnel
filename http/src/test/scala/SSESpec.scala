@@ -19,7 +19,7 @@ object SSESpec extends Properties("SSE") {
   property("url parse process propagates Exceptions") = secure {
     val x: Process[Task, String] = Process.eval{Task { throw new RuntimeException("boom")}}
     SSE.readUrl(x)
-    x.attempt().runLast.run match {
+    x.attempt().runLast.unsafePerformSync match {
       case Some(x) if (x.isLeft) => true
       case _ => false
     }

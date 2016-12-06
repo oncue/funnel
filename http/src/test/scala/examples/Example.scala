@@ -47,7 +47,7 @@ object Example {
           t.mean < 20
         }
 
-       healthy.publish("healthy", Units.Healthy).run
+       healthy.publish("healthy", Units.Healthy).unsafePerformSync
     }
 
     metrics.query.time {

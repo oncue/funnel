@@ -76,7 +76,7 @@ class SinksSpec extends FlatSpec with Matchers {
     Process(
       Context[Plan](Distribution.empty, Distribute(valid)),
       Context[Plan](Distribution.empty, Redistribute(valid, valid))
-    ).toSource.to(sinks.unsafeNetworkIO(f, q)).run.run
+    ).toSource.to(sinks.unsafeNetworkIO(f, q)).run.unsafePerformSync
 
     f.commandsCompleted shouldBe 6
     f.commandsFailed shouldBe 0
@@ -92,7 +92,7 @@ class SinksSpec extends FlatSpec with Matchers {
     Process.apply(
       Context[Plan](Distribution.empty, Distribute(broken)),
       Context[Plan](Distribution.empty, Distribute(valid))
-    ).toSource.to(sinks.unsafeNetworkIO(f, q)).run.run
+    ).toSource.to(sinks.unsafeNetworkIO(f, q)).run.unsafePerformSync
 
     f.commandsCompleted shouldBe 3
     f.commandsFailed shouldBe 1
@@ -109,7 +109,7 @@ class SinksSpec extends FlatSpec with Matchers {
     Process(
       Context[Plan](Distribution.empty, Redistribute(broken, valid)),
       Context[Plan](Distribution.empty, Distribute(valid))
-    ).toSource.to(sinks.unsafeNetworkIO(f, q)).run.run
+    ).toSource.to(sinks.unsafeNetworkIO(f, q)).run.unsafePerformSync
 
     f.commandsCompleted should be >= 2
     f.commandsCompleted should be <= 3
@@ -127,7 +127,7 @@ class SinksSpec extends FlatSpec with Matchers {
     Process.apply(
       Context[Plan](Distribution.empty, Redistribute(valid, broken)),
       Context[Plan](Distribution.empty, Distribute(valid))
-    ).toSource.to(sinks.unsafeNetworkIO(f, q)).run.run
+    ).toSource.to(sinks.unsafeNetworkIO(f, q)).run.unsafePerformSync
 
     f.commandsCompleted shouldBe 5
     f.commandsFailed shouldBe 1 //we should not try to run anything after failure
@@ -140,7 +140,7 @@ class SinksSpec extends FlatSpec with Matchers {
     Process.apply(
       Context[Plan](Distribution.empty, Redistribute(Distribution.empty, Distribution.empty)),
       Context[Plan](Distribution.empty, Distribute(Distribution.empty))
-    ).toSource.to(sinks.unsafeNetworkIO(f, q)).run.run
+    ).toSource.to(sinks.unsafeNetworkIO(f, q)).run.unsafePerformSync
 
     f.commandsCompleted shouldBe 0
     f.commandsFailed shouldBe 0

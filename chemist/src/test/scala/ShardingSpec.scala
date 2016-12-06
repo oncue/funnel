@@ -88,7 +88,7 @@ class ShardingSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
   }
 
   it should "assign flask targets to flasks" in {
-    val flask = d1.keySet.head
+    val flask = d1.keySet.toList.head
     val flaskTarget: Target = ("zz", s"http://${flask.location.host}")
 
     val (newdist, rest) = FlaskStreamsSharder.distribute(Set(flaskTarget) ++ i1)(d1)

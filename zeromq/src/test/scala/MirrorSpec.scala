@@ -50,12 +50,12 @@ class MirrorSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
   }
 
   private def countKeys(m: Monitoring): Int =
-    m.keys.compareAndSet(identity).run.get.filter(_.startsWith("previous")).size
+    m.keys.compareAndSet(identity).unsafePerformSync.get.filter(_.startsWith("previous")).size
 
   private def mirrorFrom(uri: URI): Unit =
     MI.mirrorAll(Mirror.from(S)
       )(uri, Map("uri" -> uri.toString)
-      ).run.runAsync(_.fold(e => Ø.log.error(
+      ).run.unsafePerformAsync(_.fold(e => Ø.log.error(
         s"Error mirroring $uri: ${e.getMessage}"), identity))
 
   override def beforeAll(): Unit = {
@@ -76,13 +76,13 @@ class MirrorSpec extends FlatSpec with Matchers with BeforeAndAfterAll {
   }
 
   override def afterAll(): Unit = {
-    stop(S).run
+    stop(S).unsafePerformSync
   }
 
   if(Ø.isEnabled){
     "zeromq mirroring" should "pull values from the specified monitoring instance" in {
-      (countKeys(M1) + countKeys(M2)) should equal (MI.keys.get.run.size)
-      MI.keys.get.run.size should be > 0
+      (countKeys(M1) + countKeys(M2)) should equal (MI.keys.get.unsafePerformSync.size)
+      MI.keys.get.unsafePerformSync.size should be > 0
     }
   }
 }

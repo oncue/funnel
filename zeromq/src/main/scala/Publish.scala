@@ -44,7 +44,7 @@ object Publish {
       fromMonitoring(instance)(m => log.debug(m))
         .through(write(socket))
         .onComplete(Process.eval(stop(signal)))
-    ).run.runAsync(_ match {
+    ).run.unsafePerformAsync(_ match {
       case -\/(err) =>
         log.error(s"Unable to stream monitoring events to the socket ${endpoint.location.uri}")
         log.error(s"Error was: $err")

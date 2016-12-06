@@ -73,7 +73,7 @@ object MonitoringSpec extends Properties("monitoring") {
   property("counter") = forAll { (xs: List[Long]) =>
     val c = B.counter(0)
     val input: Process[Task,Long] = Process.emitAll(xs)
-    val out = input.pipe(c).runLog.run
+    val out = input.pipe(c).runLog.unsafePerformSync
     out == xs.scanLeft(0.0)(_ + _)
   }
 
@@ -94,7 +94,7 @@ object MonitoringSpec extends Properties("monitoring") {
     val input3: Process[Task,(Option[Long],Duration)] =
       Process.emitAll(xs.map(x => (Some(x), 0.minutes))) ++
       Process.emitAll(xs.map(x => (Some(x), 1.minutes)))
-    val out = input.pipe(c).runLog.run
+    val out = input.pipe(c).runLog.unsafePerformSync
     require(out.length % 2 == 0, "length of output should be even")
     val (now, later) = out.splitAt(out.length / 2)
     val ok = (now === later) && (now === xs.scanLeft(0.0)(_ + _))
@@ -103,9 +103,9 @@ object MonitoringSpec extends Properties("monitoring") {
     // end of the first period, and one at the end of the second
     val c2 = B.emitEvery(5.minutes)(c)
     val input2 = input ++ Process(1L -> (11.minutes))
-    val out2 = input2.map{ case (x, y) => (Some(x), y) }.pipe(c2).runLog.run
+    val out2 = input2.map{ case (x, y) => (Some(x), y) }.pipe(c2).runLog.unsafePerformSync
 
-    val out3 = (input3 ++ Process(None -> 2.minutes, None -> 11.minutes)).pipe(c2).runLog.run
+    val out3 = (input3 ++ Process(None -> 2.minutes, None -> 11.minutes)).pipe(c2).runLog.unsafePerformSync
 
     ok &&
     out2.length === 2 &&
@@ -120,7 +120,7 @@ object MonitoringSpec extends Properties("monitoring") {
     val c = B.sliding(5.minutes)(identity[Int])(Group.intGroup)
     val input: Process[Task,(Int,Duration)] =
       Process.emitAll(xs.map((_, 1.minutes)))
-    val output = input.pipe(c).runLog.run
+    val output = input.pipe(c).runLog.unsafePerformSync
     output == xs.scanLeft(0)(_ + _)
   }
 
@@ -130,7 +130,7 @@ object MonitoringSpec extends Properties("monitoring") {
       Process(1 -> (0.minutes), 1 -> (1.minutes), 2 -> (3.minutes), 2 -> (4.minutes))
 
     val c = B.sliding(2.minutes)(identity[Int])(Group.intGroup)
-    val output = i1.pipe(c).runLog.run
+    val output = i1.pipe(c).runLog.unsafePerformSync
     output == List(0, 1, 2, 3, 4)
   }
 
@@ -139,11 +139,11 @@ object MonitoringSpec extends Properties("monitoring") {
    * buffered signal.
    */
   property("bufferedSignal") = forAll { (xs: List[Long]) =>
-    val (snk, s) = Monitoring.bufferedSignal(B.counter(0)).run
-    xs.traverse_(snk).run
+    val (snk, s) = Monitoring.bufferedSignal(B.counter(0)).unsafePerformSync
+    xs.traverse_(snk).unsafePerformSync
     val expected = xs.sum
     // this will 'eventually' become true, and loop otherwise
-    while (s.continuous.once.runLastOr(0.0).run !== expected) {
+    while (s.continuous.once.runLastOr(0.0).unsafePerformSync !== expected) {
       Thread.sleep(10)
     }
     true
@@ -162,7 +162,7 @@ object MonitoringSpec extends Properties("monitoring") {
       var v = Vector[A]()
       p.evalMap(a => Task {
         v = v :+ a
-      }).run.runAsyncInterruptibly(_ => (), b)
+      }).run.unsafePerformAsyncInterruptibly(_ => (), b)
       Thread.sleep(t.toMillis)
       b.set(true)
       v
@@ -183,18 +183,18 @@ object MonitoringSpec extends Properties("monitoring") {
   /* Check that `distinct` combinator works. */
   property("distinct") = forAll(Gen.nonEmptyListOf(Gen.choose(-10L,10L))) { xs =>
     val input: Process[Task,Long] = Process.emitAll(xs)
-    input.pipe(B.distinct).runLog.run.toList == xs.distinct
+    input.pipe(B.distinct).runLog.unsafePerformSync.toList == xs.distinct
   }
 
   /* Check that publishing to a bufferedSignal is 'fast'. */
   property("bufferedSignal-profiling") = secure {
     def go: Boolean = {
       val N = 100000
-      val (snk, s) = Monitoring.bufferedSignal(B.counter(0)).run
+      val (snk, s) = Monitoring.bufferedSignal(B.counter(0)).unsafePerformSync
       val t0 = System.nanoTime
-      (0 to N).toList.traverse_(x => snk(x)).run
+      (0 to N).toList.traverse_(x => snk(x)).unsafePerformSync
       val expected = (0 to N).map(_.toDouble).sum
-      while (s.continuous.once.runLastOr(0.0).run !== expected) {
+      while (s.continuous.once.runLastOr(0.0).unsafePerformSync !== expected) {
         Thread.sleep(10)
       }
       val d = Duration.fromNanos(System.nanoTime - t0) / N.toDouble
@@ -228,12 +228,12 @@ object MonitoringSpec extends Properties("monitoring") {
       f1(); f2()
       val updateTime = Duration.fromNanos(System.nanoTime - t0) / N.toDouble
       val get: Task[Double] = Monitoring.default.latest(c.keys.now)
-      while (get.run != N*2) {
+      while (get.unsafePerformSync != N*2) {
         // println("current count: " + get.run)
         Thread.sleep(10)
       }
       val publishTime = Duration.fromNanos(System.nanoTime - t0) / N.toDouble
-      val okResult = Monitoring.default.latest(ok.keys.now).run
+      val okResult = Monitoring.default.latest(ok.keys.now).unsafePerformSync
       Thread.sleep(instruments.bufferTime.toMillis * 2)
 
       //println("update time: " + updateTime)
@@ -264,7 +264,7 @@ object MonitoringSpec extends Properties("monitoring") {
           else
             Task.now(())
         )
-        M.keySenescence(Events.every(100.milliseconds), M.distinctKeys).zip(ks).run.run
+        M.keySenescence(Events.every(100.milliseconds), M.distinctKeys).zip(ks).run.unsafePerformSync
         val t = System.nanoTime - t0
         t
       }
@@ -286,7 +286,7 @@ object MonitoringSpec extends Properties("monitoring") {
       t.time { Thread.sleep(50) }
       // Make sure we wait for the time buffer to catch up
       Thread.sleep(instruments.bufferTime.toMillis * 2)
-      val r = Monitoring.default.latest(t.keys.now).run.mean
+      val r = Monitoring.default.latest(t.keys.now).unsafePerformSync.mean
       //println("Sleeping for 50ms took: " + r)
       r > 0 && (r - 50).abs < 1000
     }
@@ -308,7 +308,7 @@ object MonitoringSpec extends Properties("monitoring") {
       val updateTime = (delta.nanoseconds) / N.toDouble
       // Make sure we wait for the time buffer to catch up
       Thread.sleep(instruments.bufferTime.toMillis * 2)
-      val m = Monitoring.default.latest(t.keys.now).run.mean
+      val m = Monitoring.default.latest(t.keys.now).unsafePerformSync.mean
       //println("timer:updateTime: " + updateTime + ", m: " + m)
       updateTime.toNanos < 1000 && m == 50
     }
@@ -334,7 +334,7 @@ object MonitoringSpec extends Properties("monitoring") {
       val updateTime = Duration.fromNanos(System.nanoTime - t0) / N.toDouble
       Thread.sleep(200)
       // average time should be 2 millis
-      val m = Monitoring.default.latest(t.keys.now).run.mean
+      val m = Monitoring.default.latest(t.keys.now).unsafePerformSync.mean
       // println("average time: " + m)
       // println("timer:updateTime: " + updateTime)
       m === 2.0 && updateTime.toNanos < 1000
@@ -345,13 +345,13 @@ object MonitoringSpec extends Properties("monitoring") {
   /** Check that when publishing, we get the count that was published. */
   property("pub/sub") = forAll(Gen.nonEmptyListOf(Gen.choose(1,10))) { a =>
     val M = Monitoring.default
-    val (k, snk) = M.topic[Long,Double]("count", Units.Count, "")(B.ignoreTickAndTime(B.counter(0))).map(_.run)
+    val (k, snk) = M.topic[Long,Double]("count", Units.Count, "")(B.ignoreTickAndTime(B.counter(0))).map(_.unsafePerformSync)
     val count = M.get(k)
-    a.traverse_(x => snk(x)).run
+    a.traverse_(x => snk(x)).unsafePerformSync
     val expected = a.sum
-    var got = count.continuous.once.runLastOr(0.0).run
+    var got = count.continuous.once.runLastOr(0.0).unsafePerformSync
     while (got !== expected) {
-      got = count.continuous.once.runLastOr(0.0).run
+      got = count.continuous.once.runLastOr(0.0).unsafePerformSync
       Thread.sleep(10)
     }
     true
@@ -374,15 +374,15 @@ object MonitoringSpec extends Properties("monitoring") {
     Nondeterminism[Task].both(
       Task { a.foreach { a => aN.incrementBy(a); abN.incrementBy(a) } },
       Task { b.foreach { b => bN.incrementBy(b); abN.incrementBy(b) } }
-    ).run
+    ).unsafePerformSync
     val expectedA: Double = a.map(_.toDouble).sum
     val expectedB: Double = b.map(_.toDouble).sum
     val expectedAB: Double = ab.map(_.toDouble).sum
     @annotation.tailrec
     def go(): Unit = {
-      val gotA: Double = M.latest(aN.keys.now).run
-      val gotB: Double = M.latest(bN.keys.now).run
-      val gotAB: Double = M.latest(abN.keys.now).run
+      val gotA: Double = M.latest(aN.keys.now).unsafePerformSync
+      val gotB: Double = M.latest(bN.keys.now).unsafePerformSync
+      val gotAB: Double = M.latest(abN.keys.now).unsafePerformSync
       if ((gotA !== expectedA) || (gotB !== expectedB) || (gotAB !== expectedAB)) {
         // println("sleeping")
         // println(s"a: $gotA, b: $gotB, ab: $gotAB")
@@ -392,7 +392,7 @@ object MonitoringSpec extends Properties("monitoring") {
     }
     go()
     val t0 = System.currentTimeMillis
-    val m = latest.run
+    val m = latest.unsafePerformSync
     val millis = System.currentTimeMillis - t0
     // println(s"snapshot took: $millis")
     (m(aN.keys.now).value.asInstanceOf[Double] === expectedA) &&
@@ -514,12 +514,12 @@ object MonitoringSpec extends Properties("monitoring") {
       lt.stop(stop)
       lt.time { Thread.sleep(50) }
       lt.timeFuture(Future { Thread.sleep(50); None })
-      lt.timeTask(Task { Thread.sleep(50); None }).run
+      lt.timeTask(Task { Thread.sleep(50); None }).unsafePerformSync
       // Make sure we wait for the time buffer to catch up
       Thread.sleep(instruments.bufferTime.toMillis * 2)
       val m = Monitoring.default
-      val r1 = m.latest(t.keys.now).run.mean
-      val r2 = m.latest((c.keys.now)).run
+      val r1 = m.latest(t.keys.now).unsafePerformSync.mean
+      val r2 = m.latest((c.keys.now)).unsafePerformSync
       r1 > 0 && (r1 - 50).abs < 1000 && r2 == 6
     }
     go || go || go
@@ -548,8 +548,8 @@ object MonitoringSpec extends Properties("monitoring") {
       Thread.sleep(200)
       // average time should be 2 millis
       val m = Monitoring.default
-      val r1 = m.latest(t.keys.now).run.mean
-      val r2 = m.latest((c.keys.now)).run
+      val r1 = m.latest(t.keys.now).unsafePerformSync.mean
+      val r2 = m.latest((c.keys.now)).unsafePerformSync
       r1 === 2.0 && updateTime.toNanos < 1000 && r2 == N*2
     }
     go || go || go

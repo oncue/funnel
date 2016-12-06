@@ -7,7 +7,7 @@ common.revolver
 
 common.fatjar
 
-libraryDependencies += "oncue.knobs" %% "core" % V.knobs
+libraryDependencies += "io.verizon.knobs" %% "core" % V.knobs
 
 // fork in Test := true
 

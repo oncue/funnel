@@ -99,7 +99,7 @@ object PipelineCheck extends Properties("Pipeline") {
   property("transform works") = forAll { (sd: StaticDiscovery, s: Sharder, c: Context[PlatformEvent]) =>
     val d: Distribution = c.distribution
     val e: PlatformEvent = c.value
-    val cp: Context[Plan] = Pipeline.transform(sd, s, gatherIdentity)(c).run
+    val cp: Context[Plan] = Pipeline.transform(sd, s, gatherIdentity)(c).unsafePerformSync
     val nd: Distribution = cp.distribution
     val p: Plan = cp.value
 

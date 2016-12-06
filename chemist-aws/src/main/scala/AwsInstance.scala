@@ -86,6 +86,6 @@ case class AwsInstance(
     } yield Target(a.toString, c)
 
   private def findLocation(f: Location => Boolean): Seq[Location] =
-    locations.list.filter(f)
+    locations.list.filter(f).toList
 
 }

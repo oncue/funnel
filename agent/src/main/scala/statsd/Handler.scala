@@ -32,7 +32,7 @@ class Handler(prefix: String, I: Instruments) extends SimpleChannelInboundHandle
           a => Task.fail(a),
           b => RemoteInstruments.metricsFromRequest(b)(I))
 
-        task.run // unsafe!
+        task.unsafePerformSync // unsafe!
       }
     }
   }

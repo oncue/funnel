@@ -32,14 +32,14 @@ object ProcessMirroringEventsSpec extends Properties("processMirroringEvents") {
     val key = gauge.key
 
     //closing the signal, simulating the host dropping the connection
-    M.get(key).close.run
+    M.get(key).close.unsafePerformSync
 
     val x = M.keySenescence(Events.every(1.milliseconds),Process.eval(Task.delay(gauge.key)))
 
     Thread.sleep(1000)
 
-    x.run.run
-    !M.keys.get.run.contains(key)
+    x.run.unsafePerformSync
+    !M.keys.get.unsafePerformSync.contains(key)
   }
 
 
@@ -60,7 +60,7 @@ object ProcessMirroringEventsSpec extends Properties("processMirroringEvents") {
       _ => Process.eval(Task.delay(throw new RuntimeException("boom")))
 
     //enqueue the commands
-    commandEnqueue.run.run
+    commandEnqueue.run.unsafePerformSync
 
     //start processing commands
     Task.fork(
@@ -68,13 +68,13 @@ object ProcessMirroringEventsSpec extends Properties("processMirroringEvents") {
         mockParse,
         nodeRetries = _ => Events.takeEvery(1.millisecond,1)
       )
-    ).runAsync(_ => ())
+    ).unsafePerformAsync(_ => ())
 
     //Let it run
     Thread.sleep(1000)
 
     //cleanup
-    M.mirroringQueue.close.run
+    M.mirroringQueue.close.unsafePerformSync
 
     M.mirroringUrls.size == 0
   }
@@ -93,13 +93,13 @@ object ProcessMirroringEventsSpec extends Properties("processMirroringEvents") {
     }(_ => Task.delay(datapoint))
 
     //enqueue the commands
-    commandEnqueue.run.run
+    commandEnqueue.run.unsafePerformSync
 
     //This is used as a flag to cancel the processing
     val b = new java.util.concurrent.atomic.AtomicBoolean(false)
 
     //start processing commands
-    M.processMirroringEvents(mockParse).runAsyncInterruptibly(_ => (), b)
+    M.processMirroringEvents(mockParse).unsafePerformAsyncInterruptibly(_ => (), b)
 
     Thread.sleep(1000)
 
@@ -108,7 +108,7 @@ object ProcessMirroringEventsSpec extends Properties("processMirroringEvents") {
     Thread.sleep(1000)
 
     //cleanup
-    M.mirroringQueue.close.run
+    M.mirroringQueue.close.unsafePerformSync
     M.mirroringUrls.toMap.get(clusterName) == None
   }
 
@@ -146,14 +146,14 @@ object ProcessMirroringEventsSpec extends Properties("processMirroringEvents") {
     }(_ => Task.delay(datapoint))
 
     //start processing commands
-    Task.fork(M.processMirroringEvents(mockDataConnection)).timed(3.seconds.toMillis).attempt.runAsync(_ => ())
+    Task.fork(M.processMirroringEvents(mockDataConnection)).unsafePerformTimed(3.seconds.toMillis).attempt.unsafePerformAsync(_ => ())
 
     //send enqueue commands
-    command1Enqueue.run.run
+    command1Enqueue.run.unsafePerformSync
 
     Thread.sleep(1000)
     //send discard commands
-    command2Enqueue.run.run
+    command2Enqueue.run.unsafePerformSync
     Thread.sleep(2000)
 
     result.get
@@ -168,9 +168,9 @@ object ProcessMirroringEventsSpec extends Properties("processMirroringEvents") {
     )(
       _ => Task.delay{adp.set(true);()}
     )(_ => Task.delay(()))
-    Task.fork(Monitoring.default.link(hook)(other).run).attempt.runAsync(_ => ())
+    Task.fork(Monitoring.default.link(hook)(other).run).attempt.unsafePerformAsync(_ => ())
     Thread.sleep(1000)
-    hook.close.run
+    hook.close.unsafePerformSync
     Thread.sleep(1000)
     adp.get
   }

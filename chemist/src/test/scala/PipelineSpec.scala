@@ -88,7 +88,7 @@ class PipelineSpec extends FlatSpec with Matchers {
     val t = "http://localhost:8888/stream/previous".target
     val e: Context[PlatformEvent] = Context(d1, NewTarget(t))
 
-    transform(TestDiscovery, RandomSharding, gatherIdentity)(e).run.value match {
+    transform(TestDiscovery, RandomSharding, gatherIdentity)(e).unsafePerformSync.value match {
       case Redistribute(stop, start) =>
         stop.values.flatten.size should equal(0)
         start.values.flatten.size should equal(1)
@@ -100,8 +100,8 @@ class PipelineSpec extends FlatSpec with Matchers {
   it should "produce a ONE command to monitor for every input target" in {
     val accum: List[Plan] =
       t1.flow.map(transform(TestDiscovery, RandomSharding, gatherIdentity))
-      .scan(List.empty[Plan])((a,b) => a :+ b.run.value)
-      .runLast.run
+      .scan(List.empty[Plan])((a,b) => a :+ b.unsafePerformSync.value)
+      .runLast.unsafePerformSync
       .toList
       .flatten
 
@@ -120,7 +120,7 @@ class PipelineSpec extends FlatSpec with Matchers {
 
     val accum: List[Plan] = p.evalMap[Task, Context[Plan]](e => transform(TestDiscovery, RandomSharding, gatherIdentity)(e))
           .scan(List.empty[Plan])((a,b) => a :+ b.value)
-          .runLast.run
+          .runLast.unsafePerformSync
           .toList
           .flatten
 

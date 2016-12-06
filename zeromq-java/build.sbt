@@ -2,9 +2,9 @@
 common.settings
 
 libraryDependencies ++= Seq(
-  "org.zeromq"       % "jeromq"               % "0.3.4",
-  "org.scodec"      %% "scodec-core"          % V.scodec,
-  "oncue.ermine"    %% "ermine-parser"        % V.ermine
+  "org.zeromq"           % "jeromq"               % "0.3.4",
+  "org.scodec"          %% "scodec-core"          % V.scodec,
+  "io.verizon.ermine"   %% "parser"               % V.ermine
 )
 
 /* this is basically a hack so that the windows agent can be compiled against jeromq */

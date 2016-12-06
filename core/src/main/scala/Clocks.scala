@@ -41,6 +41,6 @@ object Clocks {
       elapsed.set(())
       remaining.set(())
       uptime.set(())
-    }.run.runAsync(_ => ())
+    }.run.unsafePerformAsync(_ => ())
   }
 }

@@ -58,13 +58,13 @@ class FlattenedSpec extends FlatSpec with Matchers with Eventually {
   case class MonitoringEnv(M: Monitoring, I: Instruments, EF: ElasticFlattened, H: InMemoryHttpLayer) {
     private def taskRun[A](t: Duration)(op: Task[A]): java.util.concurrent.atomic.AtomicBoolean = {
       val b = new java.util.concurrent.atomic.AtomicBoolean(false)
-      op.runAsyncInterruptibly(t => (), b)
+      op.unsafePerformAsyncInterruptibly(t => (), b)
       b
     }
 
     private def processRun[A](t: Duration)(p: Process[Task, A]): java.util.concurrent.atomic.AtomicBoolean = {
       val b = new java.util.concurrent.atomic.AtomicBoolean(false)
-      p.run.runAsyncInterruptibly(_ => (), b)
+      p.run.unsafePerformAsyncInterruptibly(_ => (), b)
       b
     }
 
@@ -120,7 +120,7 @@ class FlattenedSpec extends FlatSpec with Matchers with Eventually {
   "template provisioning" should "provision template if missing" in
     monitoringEnv(Seq(Rule.failedPUT(s"/_template/${sharedCfg.templateName}", 999))) {
       (env: MonitoringEnv) =>
-        val thrown:HttpException = the [HttpException] thrownBy env.EF.publish("env", "a1", "a2")(sharedCfg).run
+        val thrown:HttpException = the [HttpException] thrownBy env.EF.publish("env", "a1", "a2")(sharedCfg).unsafePerformSync
         thrown.code should equal (999)
   }
 

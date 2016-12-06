@@ -26,6 +26,6 @@ object ScalazHack {
         }
       }
 
-    Queue.mk(bound, checkAndReport, recover=false)(S)
+    Queue.mk(bound, recover=false, checkAndReport)(S)
   }
 }

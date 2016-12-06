@@ -29,24 +29,24 @@ class FlaskSpec extends FlatSpec with Matchers {
   )
 
   it should "do not fail on dead flask" in {
-    val d = Flask.gatherAssignedTargets(flasks = Seq(flask04))(fakeHttp).run
+    val d = Flask.gatherAssignedTargets(flasks = Seq(flask04))(fakeHttp).unsafePerformSync
 
     d.isEmpty should equal(true)
   }
 
   it should "aggregate data from multiple flasks" in {
-    val d = Flask.gatherAssignedTargets(flasks = Seq(flask01, flask02, flask03))(fakeHttp).run
+    val d = Flask.gatherAssignedTargets(flasks = Seq(flask01, flask02, flask03))(fakeHttp).unsafePerformSync
 
-    d.keySet should equal(Set(flask01, flask02, flask03))
+    d.keys.toSet should equal(Set(flask01, flask02, flask03))
     d.lookup(flask01).map(_.size) should equal(Some(2))
     d.lookup(flask03).map(_.size) should equal(Some(0))
   }
 
   it should "partially aggregate data from multiple flasks if some are dead" in {
     //flask4 is not part of fakeHttp
-    val d = Flask.gatherAssignedTargets(flasks = Seq(flask04, flask01, flask02))(fakeHttp).run
+    val d = Flask.gatherAssignedTargets(flasks = Seq(flask04, flask01, flask02))(fakeHttp).unsafePerformSync
 
-    d.keySet should equal(Set(flask01, flask02))
+    d.keys.toSet should equal(Set(flask01, flask02))
     d.lookup(flask01).map(_.size) should equal(Some(2))
   }
 }

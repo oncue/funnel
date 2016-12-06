@@ -37,7 +37,7 @@ object Testing {
       Glob("*HistogramMicros").matches(s) ||
       Glob("*Histogram").matches(s)
 
-    Import.fetch(cassandra, Vector(cassquery), exclusions)(cache).run.foreach(println)
+    Import.fetch(cassandra, Vector(cassquery), exclusions)(cache).unsafePerformSync.foreach(println)
 
   }
 }

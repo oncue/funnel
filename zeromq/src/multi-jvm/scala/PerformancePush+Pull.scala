@@ -53,7 +53,7 @@ object PerfMultiJvmPuller {
     Ø.link(E)(Fixtures.signal)(Ø.receive)
       .map(_.toString)
       .through(ledger)
-      .run.runAsync(_ => ())
+      .run.unsafePerformAsync(_ => ())
 
     // just stupidly wait around in this thread until the ledger says
     // we've recieved the expected amount of items from the pushers,
