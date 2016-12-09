@@ -20,7 +20,7 @@ object V {
   val dispatch   = "0.11.2"
   val netty      = "4.0.25.Final"
   val aws        = "1.10.2"
-  val ermine     = "0.3.3a"
+  val ermine     = "0.3.3"
   val cjmx       = "2.2.+"
   val scodec     = "1.7.1"
 }
