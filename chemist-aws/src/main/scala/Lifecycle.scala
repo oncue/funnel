@@ -93,10 +93,10 @@ object Lifecycle {
       a <- SQS.subscribe(queueName, ticker = ticker)(sqs)(Chemist.defaultPool)
       // _ <- Process.eval(Task(log.debug(s"stream, number messages received: ${a.length}")))
       b <- Process.emitAll(a)
-      _ <- Process.eval(Task(log.debug(s"stream, raw message received: $b")))
+      _ <- Process.eval(Task.delay(log.debug(s"stream, raw message received: $b")))
       c <- Process.eval(go(b)).stripW
       d <- Process.emitAll(c)
-      _ <- Process.eval(Task(log.debug(s"stream, computed action: $c")))
+      _ <- Process.eval(Task.delay(log.debug(s"stream, computed action: $c")))
       _ <- SQS.deleteMessages(queueName, a)(sqs)
     } yield d
   }

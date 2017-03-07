@@ -30,6 +30,7 @@ import com.amazonaws.auth.BasicAWSCredentials
 import com.amazonaws.regions.{Regions,Region}
 import com.amazonaws.services.autoscaling.AmazonAutoScaling
 import com.amazonaws.services.cloudformation.AmazonCloudFormation
+import ChemistConfig._
 
 /**
  * Settings needed to subscribe ot the appropriate queues
@@ -37,16 +38,6 @@ import com.amazonaws.services.cloudformation.AmazonCloudFormation
  */
 case class QueueConfig(
   topicName: String
-)
-
-/**
- * Used to figure out where this particular chemist
- * is running, which is going to be useful for figuring
- * out service-locality in the future.
- */
-case class MachineConfig(
-  id: String,
-  location: Location
 )
 
 case class AwsConfig(
@@ -122,22 +113,6 @@ object AwsConfig {
         templates = Nil
       )
     )
-
-  private def readStateCache(c: Option[String]): StateCache =
-    c match {
-      case Some("memory") => MemoryStateCache
-      case _              => MemoryStateCache
-    }
-
-  private def readSharder(c: Option[String]): Sharder =
-    c match {
-      case Some("least-first-round-robin") => LFRRSharding
-      case Some("random")                  => RandomSharding
-      case _                               => RandomSharding
-    }
-
-  private def readNetwork(cfg: Config): NetworkConfig =
-    NetworkConfig(cfg.require[String]("host"), cfg.require[Int]("port"))
 
   private def readCFN(cfg: Config): AmazonCloudFormation =
     CFN.client(

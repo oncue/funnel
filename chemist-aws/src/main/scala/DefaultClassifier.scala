@@ -19,6 +19,7 @@ package chemist
 package aws
 
 import scalaz.concurrent.Task
+import scalaz.Kleisli
 
 /**
  * This default implementation does not properly handle the various upgrade
@@ -33,7 +34,7 @@ import scalaz.concurrent.Task
  *
  * It is highly recommended you override this with your own classification logic.
  */
-object DefaultClassifier extends Classifier[AwsInstance]{
+object DefaultClassifier extends Classifier[AwsInstance] {
   import Classification._
 
   private[funnel] val Flask = "flask"
@@ -48,12 +49,10 @@ object DefaultClassifier extends Classifier[AwsInstance]{
   def isChemist(i: AwsInstance): Boolean =
     isApplication(Chemist)(i)
 
-  val task: Task[AwsInstance => Classification] = {
+  def classify(instance: AwsInstance): Task[Classification] =
     Task.delay {
-      instance =>
-        if (isFlask(instance)) ActiveFlask
-        else if (isChemist(instance)) ActiveChemist
-        else ActiveTarget
+      if (isFlask(instance)) ActiveFlask
+      else if (isChemist(instance)) ActiveChemist
+      else ActiveTarget
     }
-  }
 }

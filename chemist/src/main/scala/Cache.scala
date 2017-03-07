@@ -62,9 +62,35 @@ object Cache {
  * Basic cache API providing get/put operations
  */
 trait Cache[K, V] {
+
+  /** Get a value under a key */
   def get(key:K):Option[V]
+
+  /** Put a value under a key */
   def put(key:K, value:V): Unit
-  def invalidate(key:K): Unit
+
+  /** Remove a key from the cache */
+  def invalidate(key: K): Unit
+
+  /** Like put, but in bulk */
+  def putAll(xs: Seq[(K, V)]): Unit =
+    xs.foreach((put _).tupled)
+
+  /**
+   * Look up all the given keys in the cache, returning the missing keys
+   * together with the found values.
+   */
+  def lookup(ks: Seq[K]): (Seq[K], Seq[V]) =
+    ks.map(
+      k => k -> get(k)
+    ).foldLeft[(Seq[K], Seq[V])]((Seq.empty, Seq.empty)) {
+      (a,b) =>
+        val (ks, vs) = a
+        b match {
+          case (k, Some(v)) => (ks, vs :+ v)
+          case (k, None) => (ks :+ k, vs)
+        }
+    }
 }
 
 /**

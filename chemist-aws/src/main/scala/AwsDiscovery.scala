@@ -23,8 +23,10 @@ import scala.collection.JavaConverters._
 import scalaz.concurrent.Task
 import scalaz.{\/,NonEmptyList,Nondeterminism}
 import scalaz.std.vector._
+import scalaz.syntax.std.vector._
 import scalaz.syntax.monadPlus._
 import scalaz.syntax.std.option._
+import scalaz.Kleisli._
 import com.amazonaws.services.autoscaling.AmazonAutoScaling
 import com.amazonaws.services.ec2.AmazonEC2
 import com.amazonaws.services.ec2.model.{Instance => AWSInstance}
@@ -62,7 +64,7 @@ class AwsDiscovery(
     maximumSize = Some(cacheMaxSize))
 
   private val allTemplates: Map[NetworkScheme, Seq[LocationTemplate]] =
-    NetworkScheme.all.foldLeft(Map.empty[NetworkScheme,Seq[LocationTemplate]]){ (a,b) =>
+    NetworkScheme.all.foldLeft(Map.empty[NetworkScheme,Seq[LocationTemplate]]) { (a,b) =>
       a + (b -> resourceTemplates.filter(_.has(b)))
     }
 
@@ -81,20 +83,19 @@ class AwsDiscovery(
   def inventory: Task[DiscoveryInventory] = ListInventory.timeTask {
     for {
       a <- readAutoScalingGroups
-      b <- classifier.task
 
       _ = metrics.model.hostsTotal.set(a.size)
-      m = a.filter((b andThen isMonitorable)(_))
+      m <- a.toVector.filterM(classifier.kleisli.map(isMonitorable).apply)
       _ = metrics.model.hostsValid.set(m.size)
 
       v <- valid(a)
       um = a.toSet &~ v.toSet
       _ = metrics.model.hostsInValid.set(um.size)
 
-      af = a.filter((b andThen isActiveFlask)(_))
+      af <- a.toVector.filterM(classifier.kleisli.map(isActiveFlask).apply)
       _ = metrics.model.hostsActiveFlask.set(af.size)
 
-      f = a.filter((b andThen isFlask)(_))
+      f <- a.toVector.filterM(classifier.kleisli.map(isFlask).apply)
       _ = metrics.model.hostsFlask.set(f.size)
 
       _  = log.info(s"[inventory] instances=${a.size}, monitorable=${m.size}, unmonitorable=${um.size} activeFlasks=${af.size} flasks=${af.size}")
@@ -144,18 +145,6 @@ class AwsDiscovery(
    * @see funnel.chemist.AwsDiscovery.lookupOne
    */
   protected def lookupMany(ids: Seq[String]): Task[Seq[AwsInstance]] = {
-    def lookInCache: (Seq[String], Seq[AwsInstance]) =
-      ids.map(
-        id => id -> cache.get(id)
-      ).foldLeft[(Seq[String], Seq[AwsInstance])]((Seq.empty, Seq.empty)) {
-        (a,b) =>
-          val (ids,instances) = a
-          b match {
-            case (id,Some(instance)) => (ids, instances :+ instance)
-            case (id,None) => (ids :+ id, instances)
-          }
-      }
-
     def lookInAws(specificIds: Seq[String]): Task[Seq[AwsInstance]] =
       if (specificIds.isEmpty)
         Task.now(Seq.empty)
@@ -176,19 +165,16 @@ class AwsDiscovery(
             Task.fail(t)
         }
 
-    def updateCache(instances: Seq[AwsInstance]): Task[Seq[AwsInstance]] =
-      Task.delay {
-        log.debug(s"[lookupMany] updating the cache, items=${instances.length}.")
-        instances.foreach(i => cache.put(i.id, i))
-        instances
-      }
-
-    val (missing, found) = lookInCache
+    val (missing, found) = cache lookup ids
 
     if (missing.nonEmpty)
       log.info(s"[lookupMany] missing=${missing.length}, cached=${found.length}")
 
-    lookInAws(missing).flatMap(updateCache).map(_ ++ found)
+    lookInAws(missing).flatMap(is =>
+      Task.delay {
+        cache.putAll(is.map(i => (i.id, i)))
+        is
+      }).map(_ ++ found)
   }
 
   ///////////////////////////// internal api /////////////////////////////
@@ -228,10 +214,9 @@ class AwsDiscovery(
   private def instances(g: Classification => Boolean): Task[Seq[AwsInstance]] =
     for {
       a <- readAutoScalingGroups
-      b <- classifier.task
-      c  = b andThen g
+      c  = classifier.kleisli.map(g)
       // apply the specified filter if we want to remove specific groups for a reason
-      d  = a.filter(c(_))
+      d <- a.toVector.filterM(c(_))
       // _  = println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
       // _  = a.filter(c(_)).foreach { i => println(s"i: ${i.application.map(_.name)} -> ${b(i)} -> ${c(i)}") }
       // _  = println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
