@@ -29,7 +29,7 @@ class StaticTest extends FlatSpec with Matchers {
       base   <- (knobs.load(Required(
         ClassPathResource("oncue/chemist.cfg")) :: Nil))
       cfg    <- Config.readConfig(base)
-    } yield cfg.targets).run
+    } yield cfg.targets).unsafePerformSync
 
     val x: Boolean = instances.exists {
       case (TargetID("instance1"), targets) =>

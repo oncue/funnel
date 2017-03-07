@@ -49,6 +49,6 @@ class PeriodicJMXTest extends FlatSpec with Matchers with BeforeAndAfterAll {
     val I = new Instruments(Monitoring.instance(windowSize = 30.seconds))
 
     val s = Import.periodically(zookeeper, Vector(zooquery), exclusions, "TestCluster")(cache, I)()
-    s.take(3).runLog.run should have length 3
+    s.take(3).runLog.unsafePerformSync should have length 3
   }
 }

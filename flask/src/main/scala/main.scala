@@ -41,7 +41,7 @@ object Main {
           Required(ClassPathResource("flask/defaults.cfg")),
           Optional(FileResource(new File("/usr/share/oncue/etc/flask.cfg")))
         ) ++ args.toList.map(p => Optional(FileResource(new File(p)))))
-    } yield Options.readConfig(a)).run
+    } yield Options.readConfig(a)).unsafePerformSync
 
     log.debug(s"loaded the following configuration settings: $options")
 

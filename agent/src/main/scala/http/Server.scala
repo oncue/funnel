@@ -53,7 +53,7 @@ class Server(I: Instruments) extends cycle.Plan with cycle.SynchronousExecution 
           decode[InstrumentRequest](r){ typed =>
             RemoteInstruments.metricsFromRequest(typed)(I).map { _ =>
               Ok ~> JsonResponse("ok.")
-            }.or(Task.now(InternalServerError ~> JsonResponse("failed."))).run
+            }.or(Task.now(InternalServerError ~> JsonResponse("failed."))).unsafePerformSync
           }
         }
       case _ => BadRequest

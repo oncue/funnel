@@ -88,7 +88,7 @@ object Main {
       b <- knobs.aws.config
     } yield a ++ b
 
-    log.info(s"Input configuration file was: ${config.run}")
+    log.info(s"Input configuration file was: ${config.unsafePerformSync}")
 
     /**
      * Create a typed set of options using knobs.
@@ -137,7 +137,7 @@ object Main {
         jmx    = (jmxName |@| jmxUri |@| jmxFreq |@| jmxQueries |@| jmxExcludes)(JmxConfig),
         mesos = (mesosName |@| mesosUrl |@| mesosFreq |@| mesosQueries |@| Option(mesosCheckfield))(MesosConfig)
       )
-    }.run
+    }.unsafePerformSync
 
     log.debug(s"Supplied options were: $options")
 
@@ -187,7 +187,7 @@ object Main {
           } yield (y,z)).getOrElse(sys.error("Bootstrapping the agent was not possible due to a fatal error."))
 
         // start the streaming 0MQ proxy
-        new Proxy(i,o).task.runAsync(_.fold(
+        new Proxy(i,o).task.unsafePerformAsync(_.fold(
           e => log.error(s"0mq proxy resulted in failure: $e"),
           _ => ()
         ))
@@ -208,7 +208,7 @@ object Main {
     // start the nginx statistics importer
     options.nginx.foreach { n =>
       log.info(s"Launching the Nginx statistics collection from ${n.uri}.")
-      nginx.Import.periodicly(new URI(n.uri))(n.frequency, log).run.runAsync {
+      nginx.Import.periodicly(new URI(n.uri))(n.frequency, log).run.unsafePerformAsync {
         case -\/(e) => log.error("Fatal error with the nginx import from ${n.uri}")
         case _      => ()
       }
@@ -217,7 +217,7 @@ object Main {
     // start the mesos statistics importer
     options.mesos.foreach { n =>
       log.info(s"Launching the mesos statistics collection from ${n.uri}.")
-      mesos.Import.periodically(new URI(n.uri), n.queries, n.checkfield, n.name)(I)(n.frequency).run.runAsync {
+      mesos.Import.periodically(new URI(n.uri), n.queries, n.checkfield, n.name)(I)(n.frequency).run.unsafePerformAsync {
         case -\/(e) => log.error("Fatal error with the mesos import from ${n.uri}")
         case _      => ()
       }
@@ -226,7 +226,7 @@ object Main {
     // start the statsd instruments server
     options.statsd.foreach { stats =>
       log.info("Launching the StatsD instrument interface.")
-      statsd.Server(stats.port, stats.prefix)(I).runAsync {
+      statsd.Server(stats.port, stats.prefix)(I).unsafePerformAsync {
         case -\/(e) => log.error(s"Unable to start the StatsD interface: ${e.getMessage}")
         case _      => ()
       }
@@ -249,7 +249,7 @@ object Main {
           (s: String) => a(s) || b(s)
         },
         config.name
-      )(new java.util.concurrent.ConcurrentHashMap, I)(config.frequency).attempt().stripW.run.runAsync {
+      )(new java.util.concurrent.ConcurrentHashMap, I)(config.frequency).attempt().stripW.run.unsafePerformAsync {
         case -\/(e) => log.error(s"Fatal error with the JMX import from ${config.uri}. $e")
         case _      => ()
       }

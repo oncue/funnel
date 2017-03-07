@@ -15,12 +15,12 @@
 //:
 //: ----------------------------------------------------------------------------
 object V {
-  val knobs      = "3.3.3"
+  val knobs      = "3.12.27a"
   val unfiltered = "0.8.4"
   val dispatch   = "0.11.2"
   val netty      = "4.0.25.Final"
   val aws        = "1.10.2"
-  val ermine     = "0.2.1-2"
+  val ermine     = "0.3.3"
   val cjmx       = "2.2.+"
   val scodec     = "1.7.1"
 }

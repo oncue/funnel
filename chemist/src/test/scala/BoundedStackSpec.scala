@@ -26,7 +26,7 @@ class BoundedStackSpec extends FlatSpec with Matchers {
 
   it should "pop values in order they were pushed" in {
     val B1 = new BoundedStack[Char](26)
-    alpha.traverse(B1.push).run
+    alpha.traverse(B1.push).unsafePerformSync
 
     alpha.foldLeft(List.empty[Char]){ (a, c) =>
       B1.pop.toList ++ a
@@ -35,25 +35,25 @@ class BoundedStackSpec extends FlatSpec with Matchers {
 
   it should "pop the last whcih was pushed" in {
     val B1 = new BoundedStack[Char](26)
-    alpha.traverse(B1.push).run
+    alpha.traverse(B1.push).unsafePerformSync
 
     B1.pop should equal(Some('Z')) // last pushed, first to pop
     B1.peek should equal(Some('Y'))
     B1.pop should equal(Some('Y'))
-    B1.push('A').run
+    B1.push('A').unsafePerformSync
     B1.pop should equal(Some('A'))
   }
 
   it should "honour the maximum number of entries" in {
     val B1 = new BoundedStack[Int](10)
-    (1 to 11).toVector.traverse(B1.push).run
+    (1 to 11).toVector.traverse(B1.push).unsafePerformSync
     B1.peek should equal(Some(11))
     B1.toSeq should equal ((2 to 11).reverse.toSeq)
   }
 
   it should "work reasonably even with a lot of thrashing on the stack" in {
     val B1 = new BoundedStack[Int](10)
-    (1 to 10001).toVector.traverse(i => B1.push(i)).run
+    (1 to 10001).toVector.traverse(i => B1.push(i)).unsafePerformSync
     B1.peek should equal(Some(10001))
     B1.toSeq.toList should equal ( (2 to 10001).toList.reverse.take(10) )
   }

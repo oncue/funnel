@@ -36,7 +36,7 @@ class MirroringIntegrationSpec extends FlatSpec with Matchers with BeforeAndAfte
     MI.mirrorAll(SSE.readEvents(_))(
       new URI(s"http://localhost:$port/stream/previous"),
       Map("port" -> port.toString)
-    ).run.runAsync(_ => ())
+    ).run.unsafePerformAsync(_ => ())
 
   implicit val log = (s: String) => { println(s) }
 
@@ -87,11 +87,11 @@ class MirroringIntegrationSpec extends FlatSpec with Matchers with BeforeAndAfte
   // this is a dirty hack to make some assertions about
   // the monitoring instances
   private def countKeys(m: Monitoring): Int =
-    m.keys.compareAndSet(identity).run.get.filter(_.startsWith("previous")).size
+    m.keys.compareAndSet(identity).unsafePerformSync.get.filter(_.startsWith("previous")).size
 
   it should "be able to mirror all the keys from the other instances into the current state of 'MI'" in {
     (countKeys(M1) +
     countKeys(M2) +
-    countKeys(M3)) should equal (MI.keys.compareAndSet(identity).run.get.size)
+    countKeys(M3)) should equal (MI.keys.compareAndSet(identity).unsafePerformSync.get.size)
   }
 }

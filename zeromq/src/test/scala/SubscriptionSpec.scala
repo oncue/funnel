@@ -64,7 +64,7 @@ class SubscriptionSpec extends FlatSpec
       Monitoring.subscribe(M1)(_ => true)
         .through(ZeroMQ.write(socket))
         .onComplete(scalaz.stream.Process.eval(stop(S)))
-    ).run.runAsync(_ match {
+    ).run.unsafePerformAsync(_ match {
       case -\/(err) =>
         println(s"Unable to stream monitoring events to the socket ${E1.location.uri}")
         println(s"Error was: $err")
@@ -76,7 +76,7 @@ class SubscriptionSpec extends FlatSpec
       Monitoring.subscribe(M2)(_ => true)
         .through(ZeroMQ.write(socket))
         .onComplete(scalaz.stream.Process.eval(stop(S)))
-    ).run.runAsync(_ match {
+    ).run.unsafePerformAsync(_ match {
       case -\/(err) =>
         println(s"Unable to stream monitoring events to the socket ${E2.location.uri}")
         println(s"Error was: $err")
@@ -95,23 +95,23 @@ class SubscriptionSpec extends FlatSpec
   private def mirror(uri: URI, to: Monitoring): Unit =
     to.mirrorAll(Mirror.from(S)
     )(uri, Map("uri" -> uri.toString)
-    ).run.runAsync(_.fold(e => Ø.log.error(
+    ).run.unsafePerformAsync(_.fold(e => Ø.log.error(
                             s"Error mirroring $uri: ${e.getMessage}"), identity))
 
 
   override def afterAll(): Unit = {
-    stop(S).run
+    stop(S).unsafePerformSync
   }
 
   private def countKeys(m: Monitoring): Int =
-    m.keys.compareAndSet(identity).run.get.size
+    m.keys.compareAndSet(identity).unsafePerformSync.get.size
 
   if(Ø.isEnabled){
     "Subscription" should "discriminate" in {
       val cn = countKeys(MN)
       val cp = countKeys(MP)
-      val c1 = M1.keys.get.run.size
-      val c2 = M2.keys.get.run.size
+      val c1 = M1.keys.get.unsafePerformSync.size
+      val c2 = M2.keys.get.unsafePerformSync.size
       c1 should be > cn
       c2 should be > cp
 

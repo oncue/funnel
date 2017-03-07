@@ -34,7 +34,7 @@ object TestingMultiJvmPublisher {
       b <- Endpoint(publish &&& bind, Settings.tcp)
     } yield (a,b)).getOrElse(sys.error("Unable to configure the endpoints for the agent."))
 
-    new zeromq.Proxy(i,o).task.run
+    new zeromq.Proxy(i,o).task.unsafePerformSync
   }
 }
 
@@ -48,10 +48,10 @@ object TestingMultiJvmSubscriber {
     val E = Endpoint(subscribe &&& (connect ~ topics.all), Settings.tcp
       ).getOrElse(sys.error("Unable to configure the TCP subscriber endpoint"))
 
-    Ø.link(E)(Fixtures.signal)(Ø.receive).map(t => new String(t.bytes)).to(io.stdOut).run.runAsync(_ => ())
+    Ø.link(E)(Fixtures.signal)(Ø.receive).map(t => new String(t.bytes)).to(io.stdOut).run.unsafePerformAsync(_ => ())
 
     time.sleep(10.seconds)(S, Monitoring.schedulingPool)
-      .onComplete(Process.eval_(Fixtures.signal.get)).run.run
+      .onComplete(Process.eval_(Fixtures.signal.get)).run.unsafePerformSync
 
     println("Subscriber - Stopping the task...")
   }

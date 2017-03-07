@@ -37,11 +37,11 @@ class SpecMultiJvmNodeA extends FlatSpec with Matchers {
       Ø.link(E)(Fixtures.signal)(Ø.receive)
         .map(_.toString)
         .through(ledger)
-        .run.runAsync(_ => ())
+        .run.unsafePerformAsync(_ => ())
 
       Thread.sleep(5000) // oh. so. terrible.
 
-      stop(Fixtures.signal).run
+      stop(Fixtures.signal).unsafePerformSync
       // check that all the items made it here
 
       //FIXME: we expect 10001 but in Jenkins we often get only 10000.
@@ -68,7 +68,7 @@ class SpecMultiJvmNodeB extends FlatSpec with Matchers with BeforeAndAfterAll {
 
     "publishing streams" should "send the entire fixture set" in {
       val result: Boolean = Ø.linkP(E)(alive)(socket =>
-        proc.through(Ø.write(socket))).runFoldMap(identity).run
+        proc.through(Ø.write(socket))).runFoldMap(identity).unsafePerformSync
 
       result should equal (true)
     }

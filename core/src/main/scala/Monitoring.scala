@@ -98,7 +98,7 @@ trait Monitoring {
         _ <- if (b) update(key, o)
              else topicWithKey[O,O](key)(B.ignoreTickAndTime(process1.id))
       } yield ()).run
-    } yield key).runAsync(_ => ()))
+    } yield key).unsafePerformAsync(_ => ()))
   }
 
   /**
@@ -204,7 +204,7 @@ trait Monitoring {
             else Process.eval_(modifyActive(cluster, _ + source)) ++ received
           }
 
-          Task.delay(logErrors(Task.fork(receivedIdempotent.run)(defaultPool)).runAsync(_ => ()))
+          Task.delay(logErrors(Task.fork(receivedIdempotent.run)(defaultPool)).unsafePerformAsync(_ => ()))
         }
         case Discard(source) => for {
           _ <- Task.delay(log.info(s"Attempting to stop monitoring $source..."))
@@ -436,7 +436,7 @@ trait Monitoring {
    * errors using the logger in this monitoring instance.
    */
   def runLogging(x: Task[Unit]) =
-    x.runAsync(_.fold(e => log.error(e.getMessage, e), _ => ()))
+    x.unsafePerformAsync(_.fold(e => log.error(e.getMessage, e), _ => ()))
 
   /*
    * Periodically push a `None` through the set of topics under `costiveKeys`,
@@ -610,16 +610,16 @@ object Monitoring {
     val signal = signalUnset[O](Strategy.Sequential)
 
     var cur = buf.unemit match {
-      case (h, t) if h.nonEmpty => signal.set(h.last).run; t
+      case (h, t) if h.nonEmpty => signal.set(h.last).unsafePerformSync; t
       case (h, t) => t
     }
 
     val hub = Actor.actor[I] { i =>
       val (h, t) = process1.feed1(i)(cur).unemit
-      if (h.nonEmpty) signal.set(h.last).run
+      if (h.nonEmpty) signal.set(h.last).unsafePerformSync
       cur = t
       cur match {
-        case Process.Halt(e) => signal.fail(e.asThrowable).run
+        case Process.Halt(e) => signal.fail(e.asThrowable).unsafePerformSync
         case _ => ()
       }
     }(S)

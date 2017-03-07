@@ -61,10 +61,10 @@ class Flask(options: Options, val I: Instruments) {
   private[funnel] def shutdown(): Unit = {
     S.stop()
     SelfServing.stop()
-    signal.set(false).flatMap(_ => signal.close).run
+    signal.set(false).flatMap(_ => signal.close).unsafePerformSync
   }
 
-  private def runAsync(p: Task[Unit]): Unit = p.runAsync(_.fold(e => {
+  private def runAsync(p: Task[Unit]): Unit = p.unsafePerformAsync(_.fold(e => {
     e.printStackTrace()
     log.error(s"[FATAL]: error in runAsync(): error=$e msg=${e.getMessage}")
     log.error(e.getStackTrace.toList.mkString("\n","\t\n",""))
@@ -121,7 +121,7 @@ class Flask(options: Options, val I: Instruments) {
     log.info("Mirroring my own monitoring server instance...")
     List(s"http://$flaskHost:${options.selfiePort}/stream/previous",
          s"http://$flaskHost:${options.selfiePort}/stream/now?kind=traffic").foreach { s =>
-      I.monitoring.mirroringQueue.enqueueOne(funnel.Mirror(new URI(s), flaskCluster)).run
+      I.monitoring.mirroringQueue.enqueueOne(funnel.Mirror(new URI(s), flaskCluster)).unsafePerformSync
     }
 
     options.elasticExploded.foreach { elastic =>

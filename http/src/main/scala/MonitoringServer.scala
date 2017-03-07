@@ -62,13 +62,13 @@ class MonitoringServer(M: Monitoring, port: Int, keyTTL: Duration = 36.hours) {
     server.start()
     M.log.info(s"server started on port: $port")
 
-    M.keySenescence(Events.every(keyTTL), M.distinctKeys).run.runAsync(_.fold(e => {
+    M.keySenescence(Events.every(keyTTL), M.distinctKeys).run.unsafePerformAsync(_.fold(e => {
       M.log.error(s"Asynchronous error starting key senescence: $e - ${e.getMessage}")
       M.log.error(e.getStackTrace.toList.mkString("\n","\t\n",""))
     }, identity _))
     M.log.info(s"Metric key TTL is $keyTTL")
 
-    M.dataDislodgement.run.runAsync(_.fold(e => {
+    M.dataDislodgement.run.unsafePerformAsync(_.fold(e => {
       M.log.error(s"Asynchronous error in data dislodgement process: $e - ${e.getMessage}")
       M.log.error(e.getStackTrace.toList.mkString("\n","\t\n",""))
     }, identity _))
@@ -93,7 +93,7 @@ class MonitoringServer(M: Monitoring, port: Int, keyTTL: Duration = 36.hours) {
   protected def handleKeys(M: Monitoring, prefix: String, req: HttpExchange): Unit = {
     import argonaut.EncodeJson
     val query = keyQuery(req.getRequestURI)
-    val ks = M.keys.continuous.once.runLastOr(Set.empty).run.filter(x =>
+    val ks = M.keys.continuous.once.runLastOr(Set.empty).unsafePerformSync.filter(x =>
       x.startsWith(prefix) && query(x))
     // rcn: this cannot be derived implicitly when Key's type arg is Any
     val enc = EncodeJson.TraversableOnceEncodeJson[Key[Any],Set](JSON.EncodeKey[Any], implicitly)
@@ -117,7 +117,7 @@ class MonitoringServer(M: Monitoring, port: Int, keyTTL: Duration = 36.hours) {
 
   protected def handleNow(M: Monitoring, label: String, req: HttpExchange): Unit = {
     import argonaut.EncodeJson
-    val m = Monitoring.snapshot(M).run
+    val m = Monitoring.snapshot(M).unsafePerformSync
     // rcn: this cannot be derived implicitly when Datapoint's type arg is Any
     val enc = EncodeJson.TraversableOnceEncodeJson[Datapoint[Any],List](JSON.EncodeDatapoint[Any], implicitly)
     val respBytes =
@@ -144,7 +144,7 @@ class MonitoringServer(M: Monitoring, port: Int, keyTTL: Duration = 36.hours) {
 
           val p0: Process[Task, Command] = Process.emitAll(cs)
           val p: Process[Task, Unit] = p0.to(M.mirroringQueue.enqueue)
-          p.run.run
+          p.run.unsafePerformSync
           M.log.debug(s"added to mirroring queue")
           flush(202, Array.empty[Byte], req)
         }
@@ -161,7 +161,7 @@ class MonitoringServer(M: Monitoring, port: Int, keyTTL: Duration = 36.hours) {
         list => {
           val p0: Process[Task, Command] = Process.emitAll(list.map(u => Discard(new URI(u))))
           val p = p0 to M.mirroringQueue.enqueue
-          p.run.run
+          p.run.unsafePerformSync
 
           flush(202, Array.empty[Byte], req)
         }
@@ -179,7 +179,7 @@ class MonitoringServer(M: Monitoring, port: Int, keyTTL: Duration = 36.hours) {
   private def handleAudit(M: Monitoring, filter: Option[String], req: HttpExchange): Unit = {
     import JSON._; import argonaut._, Argonaut._;
     val result: Task[List[(String,Int)]] = filter.fold(M.auditByPrefix)(M.auditByAttribute)
-    result.attemptRun.fold(
+    result.unsafePerformSyncAttempt.fold(
       err => flush(500, err.getMessage.toString.getBytes("UTF-8"), req),
       list => flush(200,
         list.map(t => Audit(t._1, t._2)).asJson.nospaces.getBytes, req)

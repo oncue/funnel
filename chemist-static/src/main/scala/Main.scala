@@ -31,9 +31,9 @@ object Main {
 
     val k = knobs.load(
       Required(ClassPathResource("oncue/chemist.cfg")) ::
-      Optional(FileResource(new File("/usr/share/oncue/etc/chemist.cfg"))) :: Nil).run
+      Optional(FileResource(new File("/usr/share/oncue/etc/chemist.cfg"))) :: Nil).unsafePerformSync
 
-    val s = new Static { val config = Config.readConfig(k).run }
+    val s = new Static { val config = Config.readConfig(k).unsafePerformSync }
 
     // TIM: best I can tell, this didnt actually work beforehand
     // as we're running this on a  prototype and it doesn't

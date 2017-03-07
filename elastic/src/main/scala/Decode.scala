@@ -29,7 +29,7 @@ object Decode {
     def apply(raw: String): Option[String] =
       unapply(raw)
     def unapply(raw: String): Option[String] =
-      Task.delay(URLDecoder.decode(raw, charset.name())).attempt.map(_.toOption).run
+      Task.delay(URLDecoder.decode(raw, charset.name())).attempt.map(_.toOption).unsafePerformSync
   }
 
   /** Extract a string from a UTF8 URL-encoded string */

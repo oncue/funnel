@@ -41,11 +41,11 @@ object ExampleMultiJvmPuller {
     Ø.link(E)(Fixtures.signal)(Ø.receive)
       .map(_.toString)
       .to(io.stdOut)
-      .run.runAsync(_ => ())
+      .run.unsafePerformAsync(_ => ())
 
     Thread.sleep(10.seconds.toMillis)
 
-    stop(Fixtures.signal).run
+    stop(Fixtures.signal).unsafePerformSync
 
     Ø.log.info("Stopping the pulling process...")
   }

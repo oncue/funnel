@@ -52,7 +52,7 @@ object MirroringExample {
         reqs.incrementBy((math.random * 10).toInt)
         ok.green
       }.onComplete(Process.eval_(
-        Task.delay { println(s"halting $name:$port"); svr.stop() })).run.runAsync(_ => ())
+        Task.delay { println(s"halting $name:$port"); svr.stop() })).run.unsafePerformAsync(_ => ())
     }
 
     val accountCluster = (1 to 3).map { i =>

@@ -44,7 +44,7 @@ abstract class Pusher(name: String, uri: URI = Settings.uri, size: Int = 1000000
 
     Ø.link(E)(Fixtures.signal)(socket =>
       proc.through(Ø.write(socket)
-        ).onComplete(Process.eval(stop(Fixtures.signal)))).run.run
+        ).onComplete(Process.eval(stop(Fixtures.signal)))).run.unsafePerformSync
   }
 }
 
@@ -68,7 +68,7 @@ abstract class ApplicationPusher(name: String, aliveFor: FiniteDuration = 12.sec
     Publish.toUnixSocket(Settings.uri.toString, Fixtures.signal)
 
     time.sleep(aliveFor)(S, Monitoring.schedulingPool)
-      .onComplete(Process.eval_(Fixtures.signal.get)).run.run
+      .onComplete(Process.eval_(Fixtures.signal.get)).run.unsafePerformSync
 
     Ø.log.info(s"Stopping the '$name' process...")
   }

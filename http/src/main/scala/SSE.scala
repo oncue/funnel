@@ -44,7 +44,7 @@ object SSE {
     events.map(kv => s"event: reportable\n${dataEncode(kv)(EncodeDatapoint[Any])}\n")
           .intersperse("\n")
           .flatMap(writeTo(sink))
-          .run.run
+          .run.unsafePerformSync
 
   /**
    * Write a server-side event stream (http://www.w3.org/TR/eventsource/)
@@ -55,7 +55,7 @@ object SSE {
     events.map(k => s"event: key\n${dataEncode(k)}\n")
           .intersperse("\n")
           .map(writeTo(sink))
-          .run.run
+          .run.unsafePerformSync
 
   private def writeTo(sink: java.io.Writer): String => Process[Task, Unit] =
     line => Process.eval(Task {
