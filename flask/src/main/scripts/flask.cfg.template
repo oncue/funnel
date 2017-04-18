@@ -1,0 +1,37 @@
+
+flask {
+  metric-ttl = 24 hours
+
+  collect-local-metrics = true
+
+  local-metric-frequency = 30
+
+  environment = "REPLACE_ME"
+
+  network {
+    host = "127.0.0.1"
+    http-port = 5775
+    telemetry-port = 7390
+    selfie-port = 7557
+  }
+
+  retry-schedule {
+    duration = 30s
+    retries = 6
+  }
+
+  #EDIT WITH DETAILS OF YOUR ELASTIC SEARCH INSTALLATION
+  elastic-search-flattened {
+    url = ""
+    index-name = ""
+    type-name = "metric"
+    partition-date-format = "yyyy.MM.dd"
+    connection-timeout-in-ms = 3000
+    minimum-publish-frequency = 10 minutes
+    groups = [ "previous", "now" ]
+    template {
+      name = "monitoring"
+      location = "elastic-flattened.json"
+    }
+  }
+}
