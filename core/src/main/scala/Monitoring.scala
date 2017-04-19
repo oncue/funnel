@@ -473,6 +473,9 @@ object Monitoring {
   val schedulingPool: ScheduledExecutorService =
     Executors.newScheduledThreadPool(4, daemonThreads("monitoring-scheduled-tasks"))
 
+  val metricAdditionPool: ExecutorService =
+    Executors.newSingleThreadExecutor
+
   val default: Monitoring = instance(defaultPool, printLog)
 
   private lazy val log = journal.Logger[Monitoring.type]
@@ -532,8 +535,9 @@ object Monitoring {
           _ <- Task.delay(topics += (k -> eraseTopic(Topic(pub, v))))
           t = (k.typeOf, k.units)
           _ = log.info(s"setting key $k: costive: $costive")
-          _ <- keys_.compareAndSet(_.map(_ + k))
-          _ <- costiveKeys.compareAndSet(_.map(_ + k)) whenM costive
+          //The following need to be forked so as not to risk blocking the application thread
+          _ <- Task.fork(keys_.compareAndSet(_.map(_ + k)))(metricAdditionPool)
+          _ <- Task.fork(costiveKeys.compareAndSet(_.map(_ + k)) whenM costive)(metricAdditionPool)
         } yield (i: I) => now flatMap (t => pub(Some(i) -> t))
 
       protected def update[O](k: Key[O], v: O): Task[Unit] =
