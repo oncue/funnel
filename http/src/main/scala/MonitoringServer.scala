@@ -50,7 +50,7 @@ object MonitoringServer {
   }
 }
 
-class MonitoringServer(M: Monitoring, port: Int, keyTTL: Duration = 36.hours) {
+class MonitoringServer(M: Monitoring, port: Int, keyTTL: Duration = 36.hours, streamTimeout: Duration = 1 second) {
   import MonitoringServer._
 
   private val server = HttpServer.create(new InetSocketAddress(port), 0)
@@ -87,7 +87,7 @@ class MonitoringServer(M: Monitoring, port: Int, keyTTL: Duration = 36.hours) {
     val events = Monitoring.subscribe(M)(k =>
       Key.StartsWith(prefix)(k) && keyQuery(req.getRequestURI)(k))
     val sink = new BufferedWriter(new OutputStreamWriter(req.getResponseBody))
-    SSE.writeEvents(events, sink)
+    SSE.writeEvents(events, sink, streamTimeout)
   }
 
   protected def handleKeys(M: Monitoring, prefix: String, req: HttpExchange): Unit = {
@@ -106,7 +106,7 @@ class MonitoringServer(M: Monitoring, port: Int, keyTTL: Duration = 36.hours) {
     req.getResponseHeaders.set("Access-Control-Allow-Origin", "*")
     req.sendResponseHeaders(200, 0L) // 0 as length means we're producing a stream
     val sink = new BufferedWriter(new OutputStreamWriter(req.getResponseBody))
-    SSE.writeKeys(M.distinctKeys.filter(keyQuery(req.getRequestURI)), sink)
+    SSE.writeKeys(M.distinctKeys.filter(keyQuery(req.getRequestURI)), sink, streamTimeout)
   }
 
   private val emptyResponse = "[]".getBytes
